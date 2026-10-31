@@ -1,0 +1,1 @@
+window.SG = { url: "https://xtkbqlhyicdssadngtnv.supabase.co", key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0a2JxbGh5aWNkc3NhZG5ndG52Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNzgyNTAsImV4cCI6MjEwODk1NDI1MH0.lknWlZ1OqxyKbRXoi7RPv3703_HvLSiLzelZ94mkYNQ" };
