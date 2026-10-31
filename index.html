@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpeedGuard · Pusat Kendali Armada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--f:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;--fh:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;--navy:#0f1f33;--navy2:#1a2e46;--ink:#1b2735;--mut:#66748a;--line:#dde3ea;--bg:#eef1f5;--pan:#fff;--amber:#f5b301;
+--on:#1e9e5a;--over:#d93636;--gps:#e08a00;--stale:#6b7a8c;--off:#a7b1bd;--r:6px}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{font:14px/1.45 var(--f);color:var(--ink);background:var(--bg);font-variant-numeric:tabular-nums}
+h1,h2,h3,p,ul{margin:0}ul{padding:0;list-style:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:var(--r);padding:7px 13px;font-weight:500;line-height:1.2}
+.btn:hover{background:#f4f6f9}
+.btn.pri{background:var(--navy);border-color:var(--navy);color:#fff}.btn.pri:hover{background:var(--navy2)}
+.btn.warn{color:var(--over);border-color:#efc3c3}
+.btn.sm{padding:4px 9px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+input,select{border:1px solid #cdd5de;border-radius:var(--r);padding:8px 10px;background:#fff;width:100%}
+input:focus,select:focus{border-color:var(--navy);outline:none;box-shadow:0 0 0 3px rgba(245,179,1,.35)}
+.hint{color:var(--mut);font-size:13px}
+.err{color:var(--over);min-height:1.3em;font-size:13px}
+
+/* masuk */
+#gate{position:fixed;inset:0;z-index:5000;display:grid;grid-template-columns:1.1fr 1fr;background:#fff}
+.g-art{position:relative;background:var(--navy);color:#fff;padding:56px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.g-art svg.road{position:absolute;inset:0;width:100%;height:100%}
+.g-art>*{position:relative}
+.g-brand{display:flex;align-items:center;gap:12px;font:700 24px var(--fh);letter-spacing:.3px}
+.g-art h2{font:600 40px/1.1 var(--fh);max-width:420px}
+.g-art ul{margin-top:22px;display:grid;gap:10px;color:#b9c6d6}
+.g-art li::before{content:"";display:inline-block;width:18px;height:3px;background:var(--amber);vertical-align:middle;margin-right:10px}
+.g-form{display:grid;place-items:center;padding:32px}
+.g-form form{width:min(360px,100%);display:grid;gap:14px}
+.g-form h1{font:600 28px var(--fh)}
+.g-form label{display:grid;gap:5px;font-weight:500}
+.g-form .btn{padding:11px}
+
+/* bilah atas */
+#app{height:100%;display:grid;grid-template-rows:54px 1fr}
+.top{background:var(--navy);color:#fff;display:flex;align-items:center;gap:22px;padding:0 16px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;font:700 20px var(--fh);letter-spacing:.3px;white-space:nowrap}
+.brand small{font:400 13px var(--f);color:#9fb0c4;letter-spacing:0;padding-left:12px;border-left:1px solid #34506f}
+.kpis{display:flex;gap:6px;margin-left:8px}
+.kpi{display:flex;align-items:baseline;gap:8px;padding:5px 14px;border-radius:var(--r);background:rgba(255,255,255,.06)}
+.kpi span{font-size:12px;color:#a9b9cc;text-transform:uppercase;letter-spacing:.6px}
+.kpi b{font:600 22px var(--fh)}
+.kpi.alert{background:var(--over)}.kpi.alert span{color:#ffe3e3}
+.sp{flex:1}
+.live{display:flex;align-items:center;gap:7px;color:#a9b9cc;font-size:13px;white-space:nowrap}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--off)}
+.live.ok i{background:#3ddc84;box-shadow:0 0 0 3px rgba(61,220,132,.25)}
+#clock{font:500 15px var(--fh);color:#dbe5f1;min-width:62px;text-align:right}
+.top .btn{background:transparent;border-color:#3b5675;color:#fff}.top .btn:hover{background:rgba(255,255,255,.08)}
+.me{font-size:13px;color:#a9b9cc;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* tata letak */
+.work{display:grid;grid-template-columns:392px 1fr;min-height:0}
+.panel{background:var(--pan);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;z-index:2}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:12px 8px;font-weight:600;color:var(--mut)}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--amber)}
+.tabs em{font-style:normal;background:var(--over);color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:6px}
+.tabs em:empty{display:none}
+.pane{display:flex;flex-direction:column;min-height:0;flex:1}
+.search{padding:12px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.search input{padding-left:34px;background:#f4f6f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366748a' stroke-width='2'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='M11 11l4 4'/%3E%3C/svg%3E") no-repeat 11px center}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.chips button{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:99px;padding:4px 11px;font-size:13px}
+.chips button b{font-weight:600;color:var(--mut);margin-left:4px}
+.chips button[aria-pressed=true]{background:var(--navy);border-color:var(--navy);color:#fff}.chips button[aria-pressed=true] b{color:#c9d6e6}
+#list,#alist{overflow:auto;flex:1}
+.row{display:grid;grid-template-columns:5px 1fr auto;gap:12px;align-items:center;padding:10px 16px 10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.row:hover{background:#f6f8fb}.row.sel{background:#fff8e1}
+.row .bar{align-self:stretch;background:var(--off);margin:-10px 0}
+.row.on .bar{background:var(--on)}.row.over .bar{background:var(--over)}.row.gps .bar{background:var(--gps)}.row.stale .bar{background:var(--stale)}
+.nm{display:flex;align-items:center;gap:8px;min-width:0}.nm b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plate{font:500 12px var(--f);border:1px solid #c5cdd8;border-radius:4px;padding:0 6px;color:#46556a;background:#f8fafc;white-space:nowrap}
+.who small{color:var(--mut)}
+.row.over .who small{color:var(--over);font-weight:500}
+.spd{text-align:right;line-height:1}.spd b{font:600 26px var(--fh)}.spd small{display:block;color:var(--mut);font-size:11px;margin-top:2px}
+.row.over .spd b{color:var(--over)}.row.off .spd b,.row.stale .spd b{color:var(--off)}
+.empty{padding:28px 18px;color:var(--mut);text-align:center}
+.ev{display:grid;grid-template-columns:5px 1fr auto;gap:12px;padding:11px 16px 11px 0;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
+.ev:hover{background:#f6f8fb}.ev i{align-self:stretch;margin:-11px 0;background:var(--over)}.ev.offline i{background:var(--stale)}.ev.gps_lost i{background:var(--gps)}
+.ev b{display:block}.ev small{color:var(--mut)}.ev time{color:var(--mut);font-size:12px;text-align:right}
+
+/* detail */
+#detail{overflow:auto;flex:1}
+.dhead{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.dtop{padding:16px 18px 6px}
+.dtop h2{font:600 24px/1.15 var(--fh);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tag{font:500 12px var(--f);color:#fff;background:var(--off);border-radius:4px;padding:2px 8px}
+.tag.on{background:var(--on)}.tag.over{background:var(--over)}.tag.gps{background:var(--gps)}.tag.stale{background:var(--stale)}
+.gauge{padding:6px 18px 16px;border-bottom:1px solid var(--line)}
+.big{font-size:64px;font-weight:600;line-height:1;display:flex;align-items:baseline;gap:8px}.big small{font:400 14px var(--f);color:var(--mut)}
+.meter{height:6px;background:#e8ecf1;border-radius:3px;margin-top:10px;overflow:hidden}.meter i{display:block;height:100%;background:var(--on)}.meter.over i{background:var(--over)}
+.gauge p{margin-top:6px;color:var(--mut);font-size:13px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;padding:14px 18px;border-bottom:1px solid var(--line)}
+dt{color:var(--mut)}dd{margin:0;text-align:right;font-weight:500}dd.bad{color:var(--over)}dd a{color:#0b5cad}
+.sec{padding:14px 18px;border-bottom:1px solid var(--line)}
+.sec h3{font:600 12px var(--f);text-transform:uppercase;letter-spacing:.7px;color:var(--mut);margin-bottom:10px}
+.trail{display:flex;gap:8px;flex-wrap:wrap}.trail input{width:auto;flex:1;min-width:130px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 6px}
+.stats div{background:#f4f6f9;border-radius:var(--r);padding:8px 10px}.stats small{color:var(--mut);display:block;font-size:11px}.stats b{font:600 18px var(--fh)}
+.chart{width:100%;height:96px;display:block;margin-top:8px}
+.evs li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;font-size:13px}.evs time{color:var(--mut)}
+
+/* peta */
+.mapwrap{position:relative;min-height:0}
+#map{position:absolute;inset:0;background:#e5e3df}
+.mctl{position:absolute;z-index:500;display:flex;gap:8px}
+.mctl.tl{left:14px;bottom:24px}.mctl.tr{right:14px;top:14px}
+.seg{display:flex;background:#fff;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.3);overflow:hidden}
+.seg button{border:0;background:#fff;padding:8px 14px;font-weight:500}.seg button[aria-pressed=true]{background:var(--navy);color:#fff}
+.mbtn{border:0;background:#fff;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.3);padding:8px 14px;font-weight:500}
+.leaflet-control-zoom{border:0!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important;border-radius:var(--r)!important;overflow:hidden}
+.leaflet-control-zoom a{color:var(--ink)!important}
+.mk{position:relative;width:30px;height:30px}
+.mk-c{width:30px;height:30px;border-radius:50%;background:var(--on);border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);display:grid;place-items:center}
+.mk-c svg{width:16px;height:16px;fill:#fff}.mk-c .dot{width:8px;height:8px;border-radius:50%;background:#fff}
+.mk.over .mk-c{background:var(--over)}.mk.gps .mk-c{background:var(--gps)}.mk.stale .mk-c{background:var(--stale);opacity:.8}
+.mk.over .mk-c::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--over);animation:pulse 1.4s ease-out infinite}
+.mk.sel .mk-c{box-shadow:0 0 0 4px var(--amber),0 1px 5px rgba(0,0,0,.45)}
+.mk-t{position:absolute;top:33px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#fff;border:1px solid #c9d1db;border-radius:4px;padding:0 6px;font-size:12px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.mk-t b{font-weight:700}
+@keyframes pulse{from{transform:scale(.8);opacity:1}to{transform:scale(1.5);opacity:0}}
+@media(prefers-reduced-motion:reduce){.mk.over .mk-c::after{animation:none}}
+
+/* pengaturan */
+#sheet{position:fixed;inset:0;z-index:3000;background:rgba(15,31,51,.55);display:grid;place-items:center;padding:20px}
+.sbox{background:#fff;border-radius:10px;width:min(980px,100%);height:min(720px,100%);display:grid;grid-template-rows:auto 1fr;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.sh-h{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--navy);color:#fff}
+.sh-h h2{font:600 20px var(--fh)}
+.sh-h .btn{background:transparent;color:#fff;border-color:#3b5675}
+.sh-b{display:grid;grid-template-columns:200px 1fr;min-height:0}
+#snav{background:#f4f6f9;border-right:1px solid var(--line);padding:10px;display:grid;gap:2px;align-content:start}
+#snav button{text-align:left;border:0;background:none;padding:10px 12px;border-radius:var(--r);font-weight:500;color:#46556a}
+#snav button[aria-current=true]{background:#fff;color:var(--ink);box-shadow:inset 3px 0 0 var(--amber),0 0 0 1px var(--line)}
+#sbody{overflow:auto;padding:22px 26px}
+.lead{margin-bottom:16px;color:#46556a}
+.blk{border:1px solid var(--line);border-radius:8px;margin-bottom:16px;overflow:hidden}
+.blk>h3{background:#f4f6f9;padding:9px 16px;font:600 12px var(--f);text-transform:uppercase;letter-spacing:.7px;color:var(--mut);border-bottom:1px solid var(--line)}
+.blk>p,.blk>.addrow,.blk>ul{margin:14px 16px}
+.fld{display:grid;grid-template-columns:1fr 190px;gap:18px;padding:13px 16px;border-bottom:1px solid var(--line);align-items:center}.fld:last-child{border:0}
+.fl label{font-weight:600;display:block}.fl small{color:var(--mut);display:block;margin-top:2px}
+.fi{display:flex;align-items:center;gap:8px}.fi span{color:var(--mut);min-width:48px}
+.foot{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px}.foot .hint{margin-right:auto}
+.chk{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);align-items:flex-start;cursor:pointer}.chk:last-child{border:0}
+.chk input{width:18px;height:18px;margin-top:2px;accent-color:var(--navy)}.chk small{display:block;color:var(--mut)}
+.addrow{display:flex;gap:8px}
+.nums{display:flex;flex-wrap:wrap;gap:8px}.nums li{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid var(--line);border-radius:99px;padding:4px 6px 4px 12px}
+.nums button{border:0;background:#dde3ea;border-radius:50%;width:20px;height:20px;line-height:1}
+.bar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+.tbl{width:100%;border-collapse:collapse}.tbl th{background:#f4f6f9;text-align:left;font:600 12px var(--f);text-transform:uppercase;letter-spacing:.6px;color:var(--mut);padding:9px 14px;white-space:nowrap}
+.tbl td{padding:10px 14px;border-top:1px solid var(--line);vertical-align:middle}.tbl td.act{white-space:nowrap;text-align:right}.tbl .muted{color:var(--mut)}
+.pill{font-size:12px;border-radius:99px;padding:2px 9px;background:#e3f4ea;color:#17703f}.pill.no{background:#eceff3;color:#66748a}
+#modal{position:fixed;inset:0;z-index:4000;background:rgba(15,31,51,.55);display:grid;place-items:center;padding:16px}
+.mbox{background:#fff;border-radius:10px;width:min(440px,100%);padding:22px;display:grid;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.35);max-height:100%;overflow:auto}
+.mbox h3{font:600 20px var(--fh)}
+.mbox label{display:grid;gap:4px;font-weight:500}.mbox label small{font-weight:400;color:var(--mut)}
+.mrow{display:flex;gap:8px}
+.cred{background:#f4f6f9;border:1px dashed #b7c1ce;border-radius:8px;padding:12px 14px;font:500 15px var(--f);line-height:1.8}
+#toasts{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:6000;display:grid;gap:8px;width:min(420px,92vw)}
+.toast{background:var(--navy);color:#fff;border-radius:8px;padding:11px 16px;box-shadow:0 6px 20px rgba(0,0,0,.3);border-left:5px solid var(--amber)}
+.toast.over{border-left-color:var(--over);background:#3a1216}.toast.err{border-left-color:var(--over)}
+
+@media(max-width:900px){
+ #gate{grid-template-columns:1fr}.g-art{display:none}
+ #app{grid-template-rows:auto 1fr}
+ .top{flex-wrap:wrap;padding:8px 12px;gap:8px 14px}.brand small,.me,#clock{display:none}.kpis{order:5;width:100%;margin:0;overflow-x:auto}.kpi{padding:4px 10px}.kpi b{font-size:18px}
+ .work{grid-template-columns:1fr;grid-template-rows:42vh 1fr}.mapwrap{order:-1}.panel{border-right:0}
+ .sh-b{grid-template-columns:1fr;grid-template-rows:auto 1fr}#snav{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}#snav button{white-space:nowrap}
+ .fld{grid-template-columns:1fr}.sbox{height:100%}#sbody{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="g-art">
+    <svg class="road" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <path d="M-40 690 C 120 560 250 760 400 610 S 620 470 660 500" fill="none" stroke="#1d3652" stroke-width="46" stroke-linecap="round"/>
+      <path d="M-40 690 C 120 560 250 760 400 610 S 620 470 660 500" fill="none" stroke="#f5b301" stroke-width="2.5" stroke-dasharray="14 16" opacity=".75"/>
+      <path d="M-30 300 C 150 260 220 380 380 330 S 560 220 640 250" fill="none" stroke="#162b44" stroke-width="30" stroke-linecap="round"/>
+    </svg>
+    <div class="g-brand"><svg width="34" height="34" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="#f5b301" stroke-width="3"/><path d="M16 8l5 12-5-3-5 3z" fill="#fff"/></svg>SpeedGuard</div>
+    <div><h2>Pusat kendali armada Anda</h2>
+      <ul><li>Posisi dan kecepatan sopir secara langsung</li><li>Alert overspeed dan koneksi terputus ke WhatsApp</li><li>Riwayat jejak perjalanan per hari</li></ul></div>
+  </div>
+  <div class="g-form">
+    <form id="login">
+      <h1>Masuk sebagai admin</h1>
+      <label>Email<input id="em" type="email" autocomplete="username" required></label>
+      <label>Kata sandi<input id="pw" type="password" autocomplete="current-password" required></label>
+      <p class="err" id="err" role="alert"></p>
+      <button class="btn pri" id="lbtn">Masuk</button>
+    </form>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="brand"><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="#f5b301" stroke-width="3"/><path d="M16 8l5 12-5-3-5 3z" fill="#fff"/></svg>SpeedGuard<small id="fleet">Armada</small></div>
+    <div class="kpis" aria-live="polite">
+      <div class="kpi"><span>Bertugas</span><b id="k-on">0</b></div>
+      <div class="kpi" id="kp-over"><span>Overspeed</span><b id="k-over">0</b></div>
+      <div class="kpi"><span>Bermasalah</span><b id="k-bad">0</b></div>
+      <div class="kpi"><span>Sopir aktif</span><b id="k-all">0</b></div>
+    </div>
+    <div class="sp"></div>
+    <div class="live" id="live"><i></i><span>Menghubungkan</span></div>
+    <div id="clock"></div>
+    <button class="btn" id="b-set">Pengaturan</button>
+    <span class="me" id="me"></span>
+    <button class="btn" id="b-out">Keluar</button>
+  </header>
+
+  <div class="work">
+    <aside class="panel">
+      <div class="tabs" id="tabs" role="tablist">
+        <button role="tab" data-t="fleet" aria-selected="true">Armada</button>
+        <button role="tab" data-t="alerts" aria-selected="false">Peringatan<em id="abadge"></em></button>
+      </div>
+      <section class="pane" id="p-fleet">
+        <div class="search"><input id="q" type="search" placeholder="Cari nama atau plat" aria-label="Cari sopir"><div class="chips" id="chips"></div></div>
+        <ul id="list"></ul>
+      </section>
+      <section class="pane" id="p-alerts" hidden><ul id="alist"></ul></section>
+      <section class="pane" id="detail" hidden></section>
+    </aside>
+    <div class="mapwrap">
+      <div id="map"></div>
+      <div class="mctl tr"><button class="mbtn" id="fit">Tampilkan semua</button></div>
+      <div class="mctl tl"><div class="seg"><button id="ly-peta" aria-pressed="true">Peta</button><button id="ly-sat" aria-pressed="false">Satelit</button></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="sheet" hidden>
+  <div class="sbox" role="dialog" aria-label="Pengaturan">
+    <div class="sh-h"><h2>Pengaturan</h2><button class="btn sm" id="sclose">Tutup</button></div>
+    <div class="sh-b"><nav id="snav"></nav><div id="sbody"></div></div>
+  </div>
+</div>
+<div id="modal" hidden></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SGC = window.SG || {};
+const sb = supabase.createClient(SGC.url, SGC.key);
+const FN = SGC.fn || "quick-service";          // nama Edge Function (Supabase > Edge Functions)
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const LABEL = { on: "Bertugas", over: "Overspeed", gps: "GPS bermasalah", stale: "Tidak ada sinyal", off: "Tidak bertugas" };
+const FILTERS = [["all", "Semua"], ["on", "Bertugas"], ["over", "Overspeed"], ["gps", "GPS"], ["stale", "Offline"], ["off", "Off tugas"]];
+
+let S = { stale_after_s: 660, heartbeat_s: 300, speed_limit_kmh: 80, notify_types: [], notify_to: [] };
+let people = [], latest = new Map(), drivers = new Map(), vehicles = [], events = [];
+let filter = "all", q = "", sel = null, tab = "fleet", map = null, base = {}, layer = "peta", trailLayer = null;
+const markers = new Map();
+
+// ---------- bantu ----------
+const ageS = t => t ? (Date.now() - new Date(t)) / 1000 : Infinity;
+function ago(t) {
+  if (!t) return "belum ada lokasi";
+  const s = Math.round(ageS(t));
+  if (s < 5) return "baru saja";
+  if (s < 60) return s + " dtk lalu";
+  if (s < 3600) return Math.round(s / 60) + " mnt lalu";
+  if (s < 86400) return Math.round(s / 3600) + " jam lalu";
+  return Math.round(s / 86400) + " hari lalu";
+}
+const WIB = { timeZone: "Asia/Jakarta", hour12: false };
+const fmtT = t => new Date(t).toLocaleTimeString("id-ID", { ...WIB, hour: "2-digit", minute: "2-digit" });
+const fmtDT = t => new Date(t).toLocaleString("id-ID", { ...WIB, day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+const today = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+function toast(msg, kind, click) {
+  const t = document.createElement("div");
+  t.className = "toast " + (kind || ""); t.textContent = msg;
+  if (click) { t.style.cursor = "pointer"; t.onclick = () => { click(); t.remove(); }; }
+  $("#toasts").appendChild(t);
+  setTimeout(() => t.remove(), kind === "over" ? 12000 : 4500);
+}
+let actx;
+function beep() {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = 880; g.gain.value = .08; o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + .25);
+  } catch (e) {}
+}
+function csv(rows, name) {
+  if (!rows.length) return toast("Tidak ada data untuk diunduh.", "err");
+  const keys = Object.keys(rows[0]);
+  const text = "\ufeff" + [keys.join(","), ...rows.map(r => keys.map(k => JSON.stringify(r[k] ?? "")).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" })); a.download = name; a.click();
+}
+const genPass = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), b => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("");
+function normPhone(s) {
+  let d = String(s).replace(/\D/g, "");
+  if (d.startsWith("0")) d = "62" + d.slice(1); else if (d.startsWith("8")) d = "62" + d;
+  return d;
+}
+async function api(action, payload) {
+  const { data, error } = await sb.functions.invoke(FN, { body: { action, ...payload } });
+  if (error) {
+    let msg = "Fungsi server belum bisa dipanggil. Pastikan fungsi " + FN + " sudah diperbarui.";
+    try { const j = await error.context.json(); if (j.error) msg = j.error; } catch (e) {}
+    return { error: msg };
+  }
+  return data?.error ? { error: data.error } : { data };
+}
+
+// ---------- status ----------
+function stateOf(d) {
+  if (!d.active || !d.status || d.status === "off_duty") return "off";
+  if (d.status === "offline" || ageS(d.received_at) > S.stale_after_s) return "stale";
+  if (d.overspeed) return "over";
+  if (!d.gps_ok) return "gps";
+  return "on";
+}
+function limitOf(d) {
+  const v = vehicles.find(x => x.plate === d.plate);
+  return d.speed_limit_kmh ?? v?.speed_limit_kmh ?? S.speed_limit_kmh;
+}
+function buildDrivers() {
+  drivers = new Map(people.filter(p => p.role === "driver").map(p => [p.id, { ...latest.get(p.id), ...p, driver_id: p.id }]));
+}
+
+// ---------- daftar ----------
+function activeRows() {
+  const order = { over: 0, gps: 1, stale: 2, on: 3, off: 4 };
+  return [...drivers.values()].filter(d => d.active).map(d => ({ ...d, st: stateOf(d) }))
+    .sort((a, b) => order[a.st] - order[b.st] || a.full_name.localeCompare(b.full_name));
+}
+function render() {
+  const all = activeRows();
+  const n = k => all.filter(d => d.st === k).length;
+  $("#k-on").textContent = all.filter(d => ["on", "over", "gps"].includes(d.st)).length;
+  $("#k-over").textContent = n("over"); $("#k-bad").textContent = n("gps") + n("stale"); $("#k-all").textContent = all.length;
+  $("#kp-over").classList.toggle("alert", n("over") > 0);
+  const count = k => k === "all" ? all.length : k === "on" ? all.filter(d => ["on", "over", "gps"].includes(d.st)).length : n(k);
+  $("#chips").innerHTML = FILTERS.map(([k, t]) => `<button data-f="${k}" aria-pressed="${k === filter}">${t}<b>${count(k)}</b></button>`).join("");
+  const ql = q.trim().toLowerCase();
+  const list = all.filter(d => filter === "all" || (filter === "on" ? ["on", "over", "gps"].includes(d.st) : d.st === filter))
+    .filter(d => !ql || (d.full_name + " " + (d.plate || "")).toLowerCase().includes(ql));
+  $("#list").innerHTML = list.length ? list.map(d => {
+    const sp = d.st === "off" || d.st === "stale" || d.speed_kmh == null ? "–" : Math.round(d.speed_kmh);
+    return `<li class="row ${d.st}${sel === d.id ? " sel" : ""}" data-id="${d.id}" tabindex="0">
+      <i class="bar"></i>
+      <div class="who"><div class="nm"><b>${esc(d.full_name)}</b>${d.plate && d.st !== "off" ? `<span class="plate">${esc(d.plate)}</span>` : ""}</div>
+      <small>${LABEL[d.st]}${d.st === "off" ? "" : " · " + ago(d.recorded_at || d.received_at)}</small></div>
+      <div class="spd"><b>${sp}</b><small>km/jam</small></div></li>`;
+  }).join("") : `<li class="empty">${all.length ? "Tidak ada sopir pada filter ini." : "Belum ada sopir. Tambahkan di Pengaturan › Sopir."}</li>`;
+  renderAlerts(); renderDetail(); drawMarkers();
+}
+function renderAlerts() {
+  const ev = events.filter(e => ["overspeed", "offline", "gps_lost"].includes(e.type));
+  const recent = ev.filter(e => Date.now() - new Date(e.occurred_at) < 864e5).length;
+  $("#abadge").textContent = recent ? recent : "";
+  $("#alist").innerHTML = ev.length ? ev.slice(0, 80).map(e => {
+    const d = drivers.get(e.driver_id);
+    const title = e.type === "overspeed" ? `Overspeed ${Math.round(e.speed_kmh)} km/jam` : e.type === "offline" ? "Koneksi terputus" : "GPS bermasalah";
+    const sub = e.type === "overspeed" ? `batas ${Math.round(e.limit_kmh)} · ${e.duration_s} dtk` : "lokasi terakhir tercatat";
+    return `<li class="ev ${e.type}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i></i>
+      <div><b>${title}</b><small>${esc(d?.full_name || "Sopir")} · ${sub}</small></div><time>${fmtDT(e.occurred_at)}</time></li>`;
+  }).join("") : `<li class="empty">Belum ada peringatan.</li>`;
+}
+
+// ---------- detail sopir ----------
+function showPane() {
+  $("#p-fleet").hidden = !!sel || tab !== "fleet";
+  $("#p-alerts").hidden = !!sel || tab !== "alerts";
+  $("#detail").hidden = !sel; $("#tabs").hidden = !!sel;
+  $("#tabs").querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", b.dataset.t === tab));
+}
+function openDetail(id) {
+  sel = id; clearTrail();
+  $("#detail").innerHTML = `<div class="dhead"><button class="btn sm" id="dback">‹ Armada</button></div>
+    <div id="dv"></div>
+    <div class="sec"><h3>Jejak perjalanan</h3>
+      <div class="trail"><input type="date" id="td" value="${today()}" aria-label="Tanggal"><button class="btn pri sm" id="tb">Tampilkan</button><button class="btn sm" id="tc">Unduh CSV</button></div>
+      <div id="tr"></div></div>
+    <div class="sec"><h3>Peringatan terbaru</h3><ul class="evs" id="dev"></ul></div>`;
+  $("#dback").onclick = closeDetail; $("#tb").onclick = () => loadTrail(false); $("#tc").onclick = () => loadTrail(true);
+  showPane();
+  const d = drivers.get(id);
+  if (d?.lat != null) map.flyTo([d.lat, d.lng], Math.max(map.getZoom(), 15), { duration: .6 });
+  render();
+}
+function closeDetail() { sel = null; clearTrail(); showPane(); render(); }
+function renderDetail() {
+  const d = sel && drivers.get(sel);
+  if (!d || !$("#dv")) return;
+  const st = stateOf(d), lim = limitOf(d), sp = d.speed_kmh == null || st === "off" || st === "stale" ? null : Math.round(d.speed_kmh);
+  const pct = sp == null ? 0 : Math.min(100, sp / lim * 100), stale = ageS(d.recorded_at) > 120 && st !== "off";
+  $("#dv").innerHTML = `<div class="dtop"><h2>${esc(d.full_name)}<span class="tag ${st}">${LABEL[st]}</span></h2></div>
+    <div class="gauge"><div class="big">${sp ?? "–"}<small>km/jam</small></div>
+      <div class="meter ${st === "over" ? "over" : ""}"><i style="width:${pct}%"></i></div>
+      <p>Batas kecepatan ${lim} km/jam${d.speed_limit_kmh != null ? " (khusus sopir ini)" : ""}</p></div>
+    <dl><dt>Plat</dt><dd>${esc(d.plate || "–")}</dd>
+      <dt>Lokasi diperbarui</dt><dd class="${stale ? "bad" : ""}">${st === "off" ? "–" : ago(d.recorded_at)}</dd>
+      <dt>Kabar terakhir dari HP</dt><dd>${st === "off" ? "–" : ago(d.received_at)}</dd>
+      <dt>Baterai</dt><dd>${d.battery_pct == null ? "–" : d.battery_pct + "%"}</dd>
+      <dt>Akurasi GPS</dt><dd>${d.accuracy_m == null ? "–" : "± " + Math.round(d.accuracy_m) + " m"}</dd>
+      <dt>Koordinat</dt><dd>${d.lat == null ? "–" : `<a href="https://www.google.com/maps?q=${d.lat},${d.lng}" target="_blank" rel="noopener">${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}</a>`}</dd></dl>`;
+  $("#dev").innerHTML = events.filter(e => e.driver_id === sel && ["overspeed", "offline"].includes(e.type)).slice(0, 5)
+    .map(e => `<li><span>${e.type === "overspeed" ? "Overspeed " + Math.round(e.speed_kmh) + " km/jam" : "Koneksi terputus"}</span><time>${fmtDT(e.occurred_at)}</time></li>`).join("") || `<li class="hint">Belum ada peringatan.</li>`;
+}
+
+// ---------- jejak ----------
+function clearTrail() { if (trailLayer) { trailLayer.remove(); trailLayer = null; } }
+const rad = x => x * Math.PI / 180;
+function km(a, b) {
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+function chart(pts, lim) {
+  const W = 300, H = 90, t0 = +new Date(pts[0].recorded_at), t1 = +new Date(pts[pts.length - 1].recorded_at) || t0 + 1;
+  const ymax = Math.max(lim, ...pts.map(p => p.speed_kmh)) * 1.1, X = t => (t - t0) / Math.max(1, t1 - t0) * W, Y = v => H - v / ymax * H;
+  const line = pts.map(p => `${X(+new Date(p.recorded_at)).toFixed(1)},${Y(p.speed_kmh).toFixed(1)}`).join(" ");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Grafik kecepatan">
+    <line x1="0" x2="${W}" y1="${Y(lim)}" y2="${Y(lim)}" stroke="#d93636" stroke-dasharray="4 3" stroke-width="1"/>
+    <polyline points="${line}" fill="none" stroke="#0f1f33" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
+}
+async function loadTrail(download) {
+  const day = $("#td").value; if (!day) return;
+  const from = new Date(day + "T00:00:00+07:00"), to = new Date(+from + 864e5);
+  const { data, error } = await sb.from("positions").select("recorded_at,lat,lng,speed_kmh,overspeed,accuracy_m")
+    .eq("driver_id", sel).gte("recorded_at", from.toISOString()).lt("recorded_at", to.toISOString()).order("recorded_at").limit(1000);
+  if (error) return toast("Gagal memuat jejak: " + error.message, "err");
+  if (download) return csv(data, `jejak-${drivers.get(sel)?.full_name || "sopir"}-${day}.csv`);
+  clearTrail();
+  if (!data.length) { $("#tr").innerHTML = `<p class="hint" style="margin-top:10px">Tidak ada catatan pada tanggal ini. Titik hanya disimpan saat kendaraan bergerak.</p>`; return; }
+  const ll = data.map(p => [p.lat, p.lng]);
+  trailLayer = L.layerGroup().addTo(map);
+  L.polyline(ll, { color: "#0f1f33", weight: 5, opacity: .85 }).addTo(trailLayer);
+  L.polyline(ll, { color: "#f5b301", weight: 2 }).addTo(trailLayer);
+  L.circleMarker(ll[0], { radius: 7, color: "#fff", weight: 2, fillColor: "#1e9e5a", fillOpacity: 1 }).bindTooltip("Mulai").addTo(trailLayer);
+  L.circleMarker(ll[ll.length - 1], { radius: 7, color: "#fff", weight: 2, fillColor: "#0f1f33", fillOpacity: 1 }).bindTooltip("Terakhir").addTo(trailLayer);
+  data.filter(p => p.overspeed).forEach(p => L.circleMarker([p.lat, p.lng], { radius: 6, color: "#fff", weight: 2, fillColor: "#d93636", fillOpacity: 1 })
+    .bindTooltip(`${Math.round(p.speed_kmh)} km/jam · ${fmtT(p.recorded_at)}`).addTo(trailLayer));
+  map.fitBounds(L.latLngBounds(ll), { padding: [50, 50] });
+  let dist = 0; for (let i = 1; i < data.length; i++) dist += km(data[i - 1], data[i]);
+  const mx = Math.max(...data.map(p => p.speed_kmh));
+  $("#tr").innerHTML = `<div class="stats"><div><small>Jarak</small><b>${dist.toFixed(1)} km</b></div><div><small>Maks</small><b>${Math.round(mx)} km/j</b></div>
+    <div><small>Titik</small><b>${data.length}</b></div><div><small>Overspeed</small><b>${data.filter(p => p.overspeed).length}</b></div></div>
+    ${chart(data, limitOf(drivers.get(sel)))}<p class="hint">${fmtT(data[0].recorded_at)} – ${fmtT(data[data.length - 1].recorded_at)} WIB</p>`;
+}
+
+// ---------- peta ----------
+function initMap() {
+  map = L.map("map", { zoomControl: false }).setView([0.5, 101.5], 7);
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+  const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+  base.peta = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 20, attribution: "© OpenStreetMap · © CARTO" });
+  base.sat = L.layerGroup([L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: "Imagery © Esri, Maxar" }),
+    L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 })]);
+  let errs = 0;
+  base.peta.on("tileerror", () => {     // jika CDN peta diblokir jaringan, pindah ke peta OpenStreetMap
+    if (++errs !== 5) return;
+    map.removeLayer(base.peta);
+    base.peta = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" });
+    if (layer === "peta") base.peta.addTo(map);
+  });
+  base.peta.addTo(map);
+  $("#ly-peta").onclick = () => setLayer("peta"); $("#ly-sat").onclick = () => setLayer("sat");
+  $("#fit").onclick = fitAll;
+}
+function setLayer(k) {
+  if (k === layer) return;
+  map.removeLayer(base[layer]); base[k].addTo(map); layer = k;
+  $("#ly-peta").setAttribute("aria-pressed", k === "peta"); $("#ly-sat").setAttribute("aria-pressed", k === "sat");
+}
+function fitAll() {
+  const pts = activeRows().filter(d => d.lat != null && d.st !== "off").map(d => [d.lat, d.lng]);
+  if (pts.length) map.fitBounds(pts, { padding: [70, 70], maxZoom: 15 });
+}
+function pin(d) {
+  const st = stateOf(d), sp = d.speed_kmh == null ? "" : Math.round(d.speed_kmh);
+  const moving = d.heading != null && d.speed_kmh > 3;
+  const inner = moving ? `<svg viewBox="0 0 24 24" style="transform:rotate(${d.heading}deg)"><path d="M12 2l7 19-7-4-7 4z"/></svg>` : `<span class="dot"></span>`;
+  const tag = esc(d.full_name.split(" ")[0]) + (st === "stale" ? " · offline" : sp !== "" ? ` · <b>${sp}</b>` : "");
+  return L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15], html: `<div class="mk ${st}${sel === d.id ? " sel" : ""}"><div class="mk-c">${inner}</div><div class="mk-t">${tag}</div></div>` });
+}
+function drawMarkers() {
+  if (!map) return;
+  const seen = new Set();
+  for (const d of drivers.values()) {
+    if (!d.active || d.lat == null || stateOf(d) === "off") continue;
+    seen.add(d.id);
+    let m = markers.get(d.id);
+    if (!m) { m = L.marker([d.lat, d.lng], { icon: pin(d) }).addTo(map).on("click", () => openDetail(d.id)); markers.set(d.id, m); }
+    else { m.setLatLng([d.lat, d.lng]); m.setIcon(pin(d)); }
+    m.setZIndexOffset(sel === d.id ? 1000 : 0);
+  }
+  for (const [id, m] of markers) if (!seen.has(id)) { m.remove(); markers.delete(id); }
+}
+
+// ---------- dialog kecil ----------
+function ask({ title, note, fields, submit = "Simpan", onSubmit }) {
+  const m = $("#modal");
+  m.innerHTML = `<form class="mbox" autocomplete="off"><h3>${esc(title)}</h3>${note ? `<p class="hint">${note}</p>` : ""}
+    ${fields.map(f => `<label>${esc(f.label)}${f.hint ? `<small>${f.hint}</small>` : ""}
+      ${f.type === "select" ? `<select name="${f.k}">${f.options.map(([v, t]) => `<option value="${v}"${String(f.value) === String(v) ? " selected" : ""}>${t}</option>`).join("")}</select>`
+        : `<span class="mrow"><input name="${f.k}" type="${f.type || "text"}" value="${esc(f.value ?? "")}" placeholder="${esc(f.placeholder || "")}" ${f.required ? "required" : ""}>${f.gen ? `<button type="button" class="btn" data-gen="${f.k}">Acak</button>` : ""}</span>`}</label>`).join("")}
+    <p class="err" id="merr" role="alert"></p>
+    <div class="foot"><button type="button" class="btn" id="mx">Batal</button><button class="btn pri" id="mok">${esc(submit)}</button></div></form>`;
+  m.hidden = false;
+  const form = $("form", m);
+  $("#mx").onclick = () => { m.hidden = true; };
+  form.querySelectorAll("[data-gen]").forEach(b => b.onclick = () => { form.elements[b.dataset.gen].value = genPass(); });
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const v = {}; fields.forEach(f => v[f.k] = form.elements[f.k].value.trim());
+    const okb = $("#mok"); okb.disabled = true;
+    const err = await onSubmit(v);
+    okb.disabled = false;
+    if (err) $("#merr").textContent = err; else if (m.contains(form)) m.hidden = true;   // jika onSubmit membuka dialog info, biarkan
+  };
+  const f0 = form.elements[fields[0].k]; if (f0) f0.focus();
+}
+function info(title, html) {
+  const m = $("#modal");
+  m.innerHTML = `<div class="mbox"><h3>${esc(title)}</h3>${html}<div class="foot"><button class="btn pri" id="mx">Selesai</button></div></div>`;
+  m.hidden = false; $("#mx").onclick = () => { m.hidden = true; };
+}
+
+// ---------- pengaturan ----------
+const STABS = [["rules", "Aturan"], ["notify", "Notifikasi"], ["drivers", "Sopir"], ["vehicles", "Kendaraan"], ["audit", "Riwayat perubahan"]];
+let stab = "rules";
+function openSettings(t) { stab = t || stab; $("#sheet").hidden = false; renderSheet(); }
+function closeSheet() { $("#sheet").hidden = true; }
+function renderSheet() {
+  $("#snav").innerHTML = STABS.map(([k, t]) => `<button data-s="${k}" ${k === stab ? 'aria-current="true"' : ""}>${t}</button>`).join("");
+  ({ rules: tabRules, notify: tabNotify, drivers: tabDrivers, vehicles: tabVehicles, audit: tabAudit })[stab]();
+}
+async function saveSettings(v) {
+  const { data, error } = await sb.from("app_settings").update(v).eq("fleet_id", S.fleet_id).select();
+  if (error) return error.message;
+  if (!data?.length) return "Perubahan ditolak. Pastikan Anda masuk sebagai admin.";
+  Object.assign(S, data[0]); render(); return null;
+}
+
+const RULES = [
+  ["Pelanggaran kecepatan", [
+    ["speed_limit_kmh", "Batas kecepatan", "km/jam", 1, 10, 200, "Melanggar jika kecepatan sama dengan atau di atas angka ini. Bisa ditimpa per sopir (tab Sopir) atau per kendaraan (tab Kendaraan)."],
+    ["overspeed_seconds", "Lama melewati batas", "detik", 1, 3, 120, "Harus terus-menerus di atas batas selama ini sebelum alert dikirim. Mengurangi alarm palsu akibat GPS."],
+    ["alert_cooldown_s", "Jeda antar alert per sopir", "menit", 60, 1, 120, "Setelah satu alert terkirim, alert sejenis untuk sopir yang sama ditahan selama ini."]]],
+  ["Koneksi", [
+    ["heartbeat_s", "Tanda hidup saat berhenti", "menit", 60, 1, 15, "Saat kendaraan diam, HP mengirim kabar singkat sesuai interval ini agar tidak dianggap terputus."],
+    ["stale_after_s", "Dianggap terputus setelah", "menit", 60, 2, 60, "Sopir yang sedang bertugas tetapi HP-nya tidak mengirim kabar selama ini ditandai terputus dan memicu alert koneksi."]]],
+  ["Pencatatan dan penyimpanan", [
+    ["min_log_speed_kmh", "Catat jejak mulai kecepatan", "km/jam", 1, 0, 60, "Di bawah angka ini kendaraan dianggap berhenti dan titik jejak tidak disimpan."],
+    ["log_interval_s", "Interval catat jejak", "detik", 1, 10, 600, "Jarak waktu antar titik saat bergerak. Makin kecil makin rapat, tetapi memakai kuota dan database lebih banyak."],
+    ["max_accuracy_m", "Akurasi GPS terburuk yang dipakai", "meter", 1, 5, 200, "Titik GPS dengan akurasi lebih buruk dari ini diabaikan untuk penilaian overspeed."],
+    ["retention_days", "Simpan riwayat jejak", "hari", 1, 7, 365, "Data jejak yang lebih lama dihapus otomatis tiap malam."]]]];
+
+function tabRules() {
+  $("#sbody").innerHTML = `<p class="lead">Aturan ini berlaku untuk semua sopir. Perubahan terbaca HP sopir saat menekan <b>Mulai Bertugas</b> berikutnya.</p>
+    ${RULES.map(([title, fs]) => `<div class="blk"><h3>${title}</h3>${fs.map(([k, lab, unit, mul, min, max, help]) => `
+      <div class="fld"><div class="fl"><label for="r-${k}">${lab}</label><small>${help}</small></div>
+      <div class="fi"><input id="r-${k}" type="number" min="${min}" max="${max}" step="1" value="${Math.round(S[k] / mul * 100) / 100}"><span>${unit}</span></div></div>`).join("")}</div>`).join("")}
+    <div class="foot"><span class="err" id="r-msg"></span><button class="btn pri" id="r-save">Simpan perubahan</button></div>`;
+  $("#r-save").onclick = async () => {
+    const msg = t => { $("#r-msg").textContent = t; }, v = {};
+    for (const [, fs] of RULES) for (const [k, lab, unit, mul, min, max] of fs) {
+      const n = Number($("#r-" + k).value);
+      if (!Number.isFinite(n) || n < min || n > max) return msg(`${lab}: isi angka ${min} sampai ${max} ${unit}.`);
+      v[k] = Math.round(n * mul);
+    }
+    if (v.stale_after_s < v.heartbeat_s * 1.5) return msg("“Dianggap terputus” harus lebih lama dari 1,5 kali tanda hidup agar tidak ada alert palsu.");
+    msg(""); $("#r-save").disabled = true;
+    const err = await saveSettings(v); $("#r-save").disabled = false;
+    if (err) msg(err); else toast("Aturan tersimpan.");
+  };
+}
+
+function tabNotify() {
+  const nt = S.notify_types || []; let nums = [...(S.notify_to || [])];
+  $("#sbody").innerHTML = `<p class="lead">Atur siapa yang menerima alert WhatsApp dan jenis kejadian apa yang dikirim.</p>
+    <div class="blk"><h3>Jenis alert</h3>
+      <label class="chk"><input type="checkbox" id="n-over" ${nt.includes("overspeed") ? "checked" : ""}><span><b>Overspeed</b><small>Kecepatan di atas batas terus-menerus selama durasi yang ditetapkan.</small></span></label>
+      <label class="chk"><input type="checkbox" id="n-off" ${nt.includes("offline") ? "checked" : ""}><span><b>Koneksi terputus</b><small>Sopir sedang bertugas tetapi HP berhenti mengirim kabar.</small></span></label></div>
+    <div class="blk"><h3>Penerima WhatsApp</h3>
+      <div class="addrow"><input id="n-num" inputmode="tel" placeholder="08123456789 atau 628123456789"><button class="btn" id="n-add">Tambah</button></div>
+      <ul class="nums" id="n-list"></ul>
+      <p class="hint">Gunakan nomor yang berbeda dari nomor pengirim yang tersambung di Fonnte, supaya HP penerima berbunyi.</p></div>
+    <div class="blk"><h3>Pengirim</h3><p class="hint">Token Fonnte dan penyedia pesan disimpan sebagai rahasia di server (Supabase › Edge Functions › Secrets). Sengaja tidak ditampilkan di dashboard demi keamanan.</p></div>
+    <div class="foot"><span class="err" id="n-msg"></span><button class="btn" id="n-test">Simpan lalu kirim pesan uji</button><button class="btn pri" id="n-save">Simpan</button></div>`;
+  const draw = () => { $("#n-list").innerHTML = nums.length ? nums.map((n, i) => `<li><span>+${n}</span><button data-i="${i}" aria-label="Hapus nomor">×</button></li>`).join("") : `<li class="hint" style="padding:0">Belum ada penerima.</li>`; };
+  draw();
+  const add = () => {
+    const n = normPhone($("#n-num").value);
+    if (!/^62\d{8,13}$/.test(n)) return ($("#n-msg").textContent = "Nomor tidak valid. Contoh: 08123456789.");
+    if (nums.includes(n)) return ($("#n-msg").textContent = "Nomor itu sudah ada.");
+    $("#n-msg").textContent = ""; nums.push(n); $("#n-num").value = ""; draw();
+  };
+  $("#n-add").onclick = add; $("#n-num").onkeydown = e => { if (e.key === "Enter") add(); };
+  $("#n-list").onclick = e => { const i = e.target.dataset.i; if (i != null) { nums.splice(+i, 1); draw(); } };
+  const save = async () => {
+    const types = [$("#n-over").checked && "overspeed", $("#n-off").checked && "offline"].filter(Boolean);
+    return saveSettings({ notify_types: types, notify_to: nums });
+  };
+  $("#n-save").onclick = async () => { const err = await save(); $("#n-msg").textContent = err || ""; if (!err) toast("Pengaturan notifikasi tersimpan."); };
+  $("#n-test").onclick = async () => {
+    $("#n-test").disabled = true; $("#n-msg").textContent = "";
+    let err = await save();
+    if (!err) { const r = await api("test_notify"); err = r.error; if (!err) toast("Pesan uji terkirim. Cek WhatsApp penerima."); }
+    $("#n-msg").textContent = err || ""; $("#n-test").disabled = false;
+  };
+}
+
+function tabDrivers() {
+  const list = people.filter(p => p.role === "driver");
+  $("#sbody").innerHTML = `<div class="bar-top"><span class="hint">${list.filter(p => p.active).length} sopir aktif dari ${list.length}</span><button class="btn pri" id="d-add">+ Tambah sopir</button></div>
+    <div class="tw"><table class="tbl"><thead><tr><th>Nama</th><th>Username</th><th>Batas khusus</th><th>Status</th><th></th></tr></thead><tbody>
+    ${list.map(p => `<tr><td><b>${esc(p.full_name)}</b></td><td class="muted">${esc((p.email || "").replace(/@speedguard\.app$/, "") || "–")}</td>
+      <td>${p.speed_limit_kmh ? p.speed_limit_kmh + " km/jam" : '<span class="muted">Ikut umum</span>'}</td>
+      <td><span class="pill ${p.active ? "" : "no"}">${p.active ? "Aktif" : "Nonaktif"}</span></td>
+      <td class="act"><button class="btn sm" data-a="edit" data-id="${p.id}">Ubah</button> <button class="btn sm" data-a="pass" data-id="${p.id}">Sandi</button> <button class="btn sm ${p.active ? "warn" : ""}" data-a="tog" data-id="${p.id}">${p.active ? "Nonaktifkan" : "Aktifkan"}</button></td></tr>`).join("") || `<tr><td colspan="5" class="muted">Belum ada sopir.</td></tr>`}
+    </tbody></table></div>
+    <p class="hint" style="margin-top:12px">Sopir yang dinonaktifkan tidak bisa memulai tugas, tetapi riwayatnya tetap tersimpan.</p>`;
+  $("#d-add").onclick = () => ask({
+    title: "Tambah sopir", submit: "Buat akun", note: "Akun dipakai sopir untuk masuk di aplikasi Android.",
+    fields: [{ k: "full_name", label: "Nama lengkap", required: true }, { k: "username", label: "Username", hint: "Huruf kecil, angka, titik, atau strip. Contoh: budi.santoso", required: true },
+      { k: "password", label: "Kata sandi awal", hint: "Minimal 6 karakter. Berikan ke sopir lalu minta diganti.", value: genPass(), gen: true, required: true },
+      { k: "limit", label: "Batas kecepatan khusus (opsional)", type: "number", hint: "Kosongkan untuk mengikuti batas umum." }],
+    onSubmit: async v => {
+      const r = await api("create_driver", { full_name: v.full_name, username: v.username, password: v.password, speed_limit_kmh: v.limit || null });
+      if (r.error) return r.error;
+      await load();
+      info("Akun sopir dibuat", `<div class="cred">Nama: ${esc(v.full_name)}<br>Username: <b>${esc(v.username.toLowerCase())}</b><br>Kata sandi: <b>${esc(v.password)}</b></div><p class="hint">Catat atau kirim ke sopir sekarang. Kata sandi tidak ditampilkan lagi setelah ini.</p>`);
+      renderSheet(); return null;
+    }
+  });
+  $("#sbody").onclick = e => {
+    const b = e.target.closest("[data-a]"); if (!b) return;
+    const p = people.find(x => x.id === b.dataset.id); if (!p) return;
+    if (b.dataset.a === "edit") ask({ title: "Ubah sopir", fields: [{ k: "full_name", label: "Nama lengkap", value: p.full_name, required: true },
+      { k: "limit", label: "Batas kecepatan khusus (opsional)", type: "number", value: p.speed_limit_kmh ?? "", hint: "Kosongkan untuk mengikuti batas umum." }],
+      onSubmit: async v => { const { error } = await sb.from("profiles").update({ full_name: v.full_name, speed_limit_kmh: v.limit ? Number(v.limit) : null }).eq("id", p.id); if (error) return error.message; await load(); renderSheet(); return null; } });
+    if (b.dataset.a === "pass") ask({ title: "Atur ulang kata sandi", note: "Sandi baru untuk " + esc(p.full_name) + ".", submit: "Atur ulang",
+      fields: [{ k: "password", label: "Kata sandi baru", value: genPass(), gen: true, required: true, hint: "Minimal 6 karakter." }],
+      onSubmit: async v => { const r = await api("reset_password", { driver_id: p.id, password: v.password }); if (r.error) return r.error;
+        info("Kata sandi diperbarui", `<div class="cred">Username: <b>${esc((p.email || "").replace(/@speedguard\.app$/, ""))}</b><br>Kata sandi: <b>${esc(v.password)}</b></div>`); return null; } });
+    if (b.dataset.a === "tog") ask({ title: p.active ? "Nonaktifkan sopir?" : "Aktifkan sopir?", submit: p.active ? "Nonaktifkan" : "Aktifkan", fields: [],
+      note: p.active ? esc(p.full_name) + " tidak akan bisa memulai tugas. Riwayat tetap tersimpan." : esc(p.full_name) + " bisa memulai tugas lagi.",
+      onSubmit: async () => { const { error } = await sb.from("profiles").update({ active: !p.active }).eq("id", p.id); if (error) return error.message; await load(); renderSheet(); return null; } });
+  };
+}
+
+function tabVehicles() {
+  $("#sbody").innerHTML = `<div class="bar-top"><span class="hint">Plat terdaftar otomatis memakai batas kecepatan kendaraannya (jika diisi).</span><button class="btn pri" id="v-add">+ Tambah kendaraan</button></div>
+    <div class="tw"><table class="tbl"><thead><tr><th>Plat</th><th>Nama / jenis</th><th>Batas khusus</th><th>Status</th><th></th></tr></thead><tbody>
+    ${vehicles.map(v => `<tr><td><span class="plate">${esc(v.plate)}</span></td><td>${esc(v.name || "–")}</td>
+      <td>${v.speed_limit_kmh ? v.speed_limit_kmh + " km/jam" : '<span class="muted">Ikut umum</span>'}</td><td><span class="pill ${v.active ? "" : "no"}">${v.active ? "Aktif" : "Nonaktif"}</span></td>
+      <td class="act"><button class="btn sm" data-id="${v.id}">Ubah</button></td></tr>`).join("") || `<tr><td colspan="5" class="muted">Belum ada kendaraan terdaftar.</td></tr>`}</tbody></table></div>`;
+  const fields = v => [{ k: "plate", label: "Plat nomor", value: v?.plate, placeholder: "BM 1234 GA", required: true },
+    { k: "name", label: "Nama / jenis (opsional)", value: v?.name, placeholder: "Truk Fuso 01" },
+    { k: "limit", label: "Batas kecepatan khusus (opsional)", type: "number", value: v?.speed_limit_kmh ?? "" },
+    ...(v ? [{ k: "active", label: "Status", type: "select", value: v.active, options: [["true", "Aktif"], ["false", "Nonaktif"]] }] : [])];
+  const norm = s => s.trim().replace(/\s+/g, " ").toUpperCase();
+  $("#v-add").onclick = () => ask({ title: "Tambah kendaraan", fields: fields(),
+    onSubmit: async v => {
+      const { error } = await sb.from("vehicles").insert({ fleet_id: S.fleet_id, plate: norm(v.plate), name: v.name || null, speed_limit_kmh: v.limit ? Number(v.limit) : null });
+      if (error) return error.code === "23505" ? "Plat itu sudah terdaftar." : error.message;
+      await load(); renderSheet(); return null;
+    } });
+  $("#sbody").onclick = e => {
+    const b = e.target.closest("[data-id]"); const v = b && vehicles.find(x => x.id === b.dataset.id); if (!v) return;
+    ask({ title: "Ubah kendaraan", fields: fields(v), onSubmit: async x => {
+      const { error } = await sb.from("vehicles").update({ plate: norm(x.plate), name: x.name || null, speed_limit_kmh: x.limit ? Number(x.limit) : null, active: x.active === "true" }).eq("id", v.id);
+      if (error) return error.code === "23505" ? "Plat itu sudah terdaftar." : error.message;
+      await load(); renderSheet(); return null; } });
+  };
+}
+
+const KEYS = { speed_limit_kmh: "Batas kecepatan", overspeed_seconds: "Lama melewati batas", min_log_speed_kmh: "Catat mulai", log_interval_s: "Interval catat", heartbeat_s: "Tanda hidup",
+  alert_cooldown_s: "Jeda alert", max_accuracy_m: "Akurasi maks", stale_after_s: "Dianggap terputus", retention_days: "Retensi", notify_types: "Jenis alert", notify_to: "Penerima",
+  full_name: "Nama", active: "Aktif", plate: "Plat", name: "Nama kendaraan", role: "Peran" };
+const OBJ = { app_settings: "Pengaturan", profiles: "Akun sopir", vehicles: "Kendaraan" };
+async function tabAudit() {
+  $("#sbody").innerHTML = `<p class="hint">Memuat…</p>`;
+  const { data, error } = await sb.from("audit_log").select("*").order("at", { ascending: false }).limit(80);
+  if (error) { $("#sbody").innerHTML = `<p class="err">${esc(error.message)}</p>`; return; }
+  const fv = v => v == null ? "–" : Array.isArray(v) ? (v.join(", ") || "–") : String(v);
+  const diff = a => {
+    if (a.action === "INSERT") return "Ditambahkan"; if (a.action === "DELETE") return "Dihapus";
+    const o = a.old_row || {}, n = a.new_row || {};
+    return Object.keys(n).filter(k => !["id", "email", "created_at", "fleet_id"].includes(k) && JSON.stringify(n[k]) !== JSON.stringify(o[k]))
+      .map(k => `${KEYS[k] || k}: ${fv(o[k])} → ${fv(n[k])}`).join("; ") || "–";
+  };
+  $("#sbody").innerHTML = `<p class="lead">Catatan perubahan penting pada pengaturan, akun sopir, dan kendaraan.</p><div class="tw"><table class="tbl"><thead><tr><th>Waktu</th><th>Oleh</th><th>Objek</th><th>Perubahan</th></tr></thead><tbody>
+    ${data.map(a => `<tr><td style="white-space:nowrap">${fmtDT(a.at)}</td><td>${esc(people.find(p => p.id === a.actor)?.full_name || "Sistem")}</td><td>${OBJ[a.table_name] || esc(a.table_name)}</td><td>${esc(diff(a))}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">Belum ada catatan.</td></tr>`}</tbody></table></div>`;
+}
+
+// ---------- data & realtime ----------
+async function load() {
+  const [p, l, s, v, e] = await Promise.all([
+    sb.from("profiles").select("*").order("full_name"),
+    sb.from("driver_latest").select("*"),
+    sb.from("app_settings").select("*").single(),
+    sb.from("vehicles").select("*").order("plate"),
+    sb.from("events").select("*").order("occurred_at", { ascending: false }).limit(100)]);
+  if (s.data) S = s.data;
+  people = p.data || []; vehicles = v.data || []; events = e.data || [];
+  latest = new Map((l.data || []).map(x => [x.driver_id, x]));
+  buildDrivers(); render();
+}
+function subscribe() {
+  sb.channel("live")
+    .on("postgres_changes", { event: "*", schema: "public", table: "driver_latest" }, p => { latest.set(p.new.driver_id, p.new); buildDrivers(); render(); })
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "events" }, p => {
+      const ev = p.new; events.unshift(ev);
+      if (ev.type === "overspeed" || ev.type === "offline") {
+        const d = drivers.get(ev.driver_id);
+        toast(`${ev.type === "overspeed" ? "Overspeed " + Math.round(ev.speed_kmh) + " km/jam" : "Koneksi terputus"} · ${d?.full_name || "Sopir"}`, "over", () => openDetail(ev.driver_id));
+        beep();
+      }
+      render();
+    })
+    .subscribe(s => { $("#live").classList.toggle("ok", s === "SUBSCRIBED"); $("#live span").textContent = s === "SUBSCRIBED" ? "Langsung" : "Terputus, mencoba lagi"; });
+}
+
+// ---------- mulai ----------
+let started = false;
+async function enter() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { $("#gate").hidden = false; $("#app").hidden = true; return; }
+  const { data: me } = await sb.from("profiles").select("role,full_name").eq("id", session.user.id).single();
+  if (me?.role !== "admin") { await sb.auth.signOut(); $("#gate").hidden = false; $("#err").textContent = "Akun ini bukan admin."; return; }
+  $("#gate").hidden = true; $("#app").hidden = false; $("#me").textContent = me.full_name || session.user.email;
+  if (started) return; started = true;
+  initMap();
+  $("#tabs").onclick = e => { const t = e.target.closest("[data-t]"); if (t) { tab = t.dataset.t; showPane(); } };
+  $("#q").oninput = e => { q = e.target.value; render(); };
+  $("#chips").onclick = e => { const f = e.target.closest("[data-f]"); if (f) { filter = f.dataset.f; render(); } };
+  const open = e => { const r = e.target.closest(".row"); if (r) openDetail(r.dataset.id); };
+  $("#list").onclick = open; $("#list").onkeydown = e => { if (e.key === "Enter") open(e); };
+  $("#alist").onclick = e => {
+    const r = e.target.closest(".ev"); if (!r) return;
+    openDetail(r.dataset.id);
+    if (r.dataset.lat) map.flyTo([+r.dataset.lat, +r.dataset.lng], 16, { duration: .6 });
+  };
+  $("#b-set").onclick = () => openSettings(); $("#sclose").onclick = closeSheet;
+  $("#snav").onclick = e => { const b = e.target.closest("[data-s]"); if (b) { stab = b.dataset.s; renderSheet(); } };
+  setInterval(() => { $("#clock").textContent = new Date().toLocaleTimeString("id-ID", { ...WIB, hour: "2-digit", minute: "2-digit", second: "2-digit" }); }, 1000);
+  setInterval(render, 5000); setInterval(load, 60000);
+  await load(); fitAll(); subscribe();
+}
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!$("#modal").hidden) $("#modal").hidden = true; else if (!$("#sheet").hidden) closeSheet();
+});
+$("#login").onsubmit = async e => {
+  e.preventDefault(); $("#err").textContent = ""; $("#lbtn").disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email: $("#em").value.trim(), password: $("#pw").value });
+  $("#lbtn").disabled = false;
+  if (error) $("#err").textContent = /fetch|network/i.test(error.message) ? "Tidak bisa terhubung ke server. Cek config.js dan internet." : "Email atau kata sandi salah."; else enter();
+};
+$("#b-out").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$("#fleet").textContent = "Pusat kendali";
+enter();
+</script>
+</body>
+</html>
