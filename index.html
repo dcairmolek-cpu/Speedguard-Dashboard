@@ -273,6 +273,20 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
  #rapor .sbx{box-shadow:none;height:auto;width:100%;display:block}#rapor .sh-h button,.rtool2,.rtabs,.noprint{display:none!important}
  #rbody2{overflow:visible!important;padding:0!important}
 }
+ #navtog{display:none}
+#navshade{display:none}
+@media (max-width:640px){
+  #navtog{display:grid;width:44px;height:44px}
+  body.nav-open #navshade{display:block;position:fixed;inset:0;background:rgba(15,31,51,.45);z-index:4400}
+  .side{position:fixed;top:0;left:0;bottom:0;width:270px;max-width:82vw;z-index:4500;flex-direction:column;align-items:stretch;overflow-y:auto;border-radius:0 18px 18px 0;box-shadow:0 10px 40px rgba(0,0,0,.35);transform:translateX(-105%);transition:transform .25s ease;background:var(--card);padding:14px}
+  body.nav-open .side{transform:translateX(0)}
+  .side .welcome,.side .fleetsel,.side .redcard,.side .addcard{display:flex}
+  .side .redcard{display:block}
+  .side .addcard{display:grid}
+  .nav{display:grid;overflow:visible;gap:4px}
+  .nav button{width:100%;padding:12px 12px;font-size:15px;min-height:46px;white-space:normal}
+  .side .foot{display:block;margin-top:auto}
+}
 </style>
 </head>
 <body>
@@ -322,6 +336,7 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
 
   <div class="main">
     <header class="mhead">
+     <button class="ibtn" id="navtog" aria-label="Buka menu" title="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       <div class="ttl"><h1>Pelacakan armada</h1><span id="sub">DC Air Molek</span></div>
       <select id="pick" aria-label="Pilih sopir"><option value="">Pilih sopir</option></select>
       <div class="sp"></div>
@@ -376,6 +391,7 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
   </div>
 </div>
 
+<div id="navshade" hidden></div> 
 <div id="sheet" hidden>
   <div class="sbx" role="dialog" aria-label="Pengaturan">
     <div class="sh-h"><h2>Pengaturan</h2><button class="btn sm" id="sclose">Tutup</button></div>
@@ -1456,6 +1472,10 @@ $("#b-out").onclick = async () => { await sb.auth.signOut(); location.reload(); 
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; $("#b-install").hidden = false; });
 $("#b-install").onclick = async () => { if (!deferredInstall) return; deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; $("#b-install").hidden = true; };
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+$("#navtog").onclick = () => document.body.classList.toggle("nav-open");
+$("#navshade").onclick = () => document.body.classList.remove("nav-open");
+$("#nav").addEventListener("click", () => document.body.classList.remove("nav-open"));
+$("#navshade").hidden = false;
 enter();
 </script>
 </body>
