@@ -291,6 +291,17 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
   .pane{flex:none}
   .side .foot{display:block;margin-top:auto}
 }
+.pane[hidden]{display:none!important}
+ /* ===== HP: susunan daftar dibuat blok biasa (tidak bergantung tinggi layar) ===== */
+@media (max-width:640px){
+  .mid{display:block!important;height:auto!important;min-height:0!important}
+  .mapcard{display:block!important;height:auto!important;flex:none}
+  .listcard{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
+  .listcard .tabs{display:flex;gap:6px}
+  .listcard .tabs button{flex:1;min-height:44px}
+  .pane{display:block!important;flex:none!important;height:auto!important;overflow:visible!important}
+  #list,#alist{overflow:visible!important;flex:none!important;max-height:none!important}
+}
 </style>
 </head>
 <body>
