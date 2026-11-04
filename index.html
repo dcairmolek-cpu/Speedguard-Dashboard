@@ -302,6 +302,18 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
   .pane{display:block!important;flex:none!important;height:auto!important;overflow:visible!important}
   #list,#alist{overflow:visible!important;flex:none!important;max-height:none!important}
 }
+ /* ===== HP: baris filter bisa digeser ke samping, ukuran tab tetap ===== */
+@media (max-width:640px){
+  .chips{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;padding:10px 12px}
+  .chips button{flex:none}
+}
+ /* ===== HP: cegah layar melebar (kolom grid tidak boleh lebih lebar dari layar) ===== */
+@media (max-width:640px){
+  #app{grid-template-columns:minmax(0,1fr)!important}
+  .main,.mid,.bot,.mapcard,.listcard,.pane,.chips{min-width:0!important;max-width:100%!important}
+  .listcard .tabs button{min-width:0!important;flex:1 1 0!important}
+  html,body{overflow-x:hidden}
+}
 </style>
 </head>
 <body>
