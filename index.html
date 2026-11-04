@@ -557,7 +557,7 @@ function render() {
 function renderAlerts() {
   const ev = events.filter(e => ALERT_TYPES.includes(e.type));
   const recent = ev.filter(e => Date.now() - new Date(e.occurred_at) < 864e5);
-  ["#abadge", "#nbadge", "#bbadge"].forEach(s => { $(s).textContent = recent.filter(e => !dismissedSet().has(Number(e.id)).length || ""; });
+  ["#abadge", "#nbadge", "#bbadge"].forEach(s => { $(s).textContent = recent.filter(e => !dismissedSet().has(Number(e.id))).length || ""; });
   $("#alist").innerHTML = ev.length ? ev.slice(0, 80).map(e => {
     const i = evInfo(e);
     return `<li class="ev ${e.type}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
