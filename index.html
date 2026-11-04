@@ -564,7 +564,7 @@ function renderAlerts() {
       <div><b>${esc(i.title)}</b><small>${esc(i.name)} · ${esc(i.sub)}</small></div><time>${fmtDT(e.occurred_at)}</time></li>`;
   }).join("") : `<li class="empty">Belum ada peringatan.</li>`;
   const seen = dismissedSet();
-  const last = recent.find(e => !seen.has(Number(e.id)) || null;
+  const last = recent.find(e => !seen.has(Number(e.id))) || null;
   ["#alertcard", "#alertfs"].forEach(s => { const c = $(s); c.hidden = !last; if (last) c.innerHTML = alertHtml(last); });
 }
 function todayStats(all) {
