@@ -524,9 +524,19 @@ function rowHtml(d) {
     <small>${LABEL[d.st]}${d.st === "off" ? "" : " · " + ago(d.recorded_at || d.received_at)}</small></div>
     <div class="spd"><b>${sp}</b><small>km/jam</small></div></li>`;
 }
+ // ---------- peringatan yang sudah ditutup (disimpan di browser) ----------
+function dismissedSet() {
+  try { return new Set(JSON.parse(localStorage.getItem("sg-dismissed") || "[]")); } catch (e) { return new Set(); }
+}
+function dismissAlert(id) {
+  const s = dismissedSet(); s.add(id);
+  try { localStorage.setItem("sg-dismissed", JSON.stringify([...s].slice(-300))); } catch (e) {}
+  document.querySelectorAll("#alertcard,#alertfs").forEach(c => { c.hidden = true; c.innerHTML = ""; });
+  render();
+}
 function alertHtml(e) {
   const i = evInfo(e);
-  return `<button class="alc ${e.type === "sos" ? "sos" : ""}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
+  return `<button class="alc ${e.type === "sos" ? "sos" : ""}" data-id="${e.driver_id}" data-evid="${e.id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
     <div><small>Peringatan terbaru</small><b>${esc(i.title)}</b><span>${esc(i.name)} · ${fmtT(e.occurred_at)}</span></div></button>`;
 }
 function render() {
@@ -553,7 +563,8 @@ function renderAlerts() {
     return `<li class="ev ${e.type}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
       <div><b>${esc(i.title)}</b><small>${esc(i.name)} · ${esc(i.sub)}</small></div><time>${fmtDT(e.occurred_at)}</time></li>`;
   }).join("") : `<li class="empty">Belum ada peringatan.</li>`;
-  const last = recent[0];
+  const seen = dismissedSet();
+  const last = recent.find(e => !seen.has(e.id)) || null;
   ["#alertcard", "#alertfs"].forEach(s => { const c = $(s); c.hidden = !last; if (last) c.innerHTML = alertHtml(last); });
 }
 function todayStats(all) {
@@ -1407,7 +1418,11 @@ async function enter() {
   $("#chips").onclick = e => { const f = e.target.closest("[data-f]"); if (f) { filter = f.dataset.f; render(); } };
   const open = e => { const r = e.target.closest(".row"); if (r) openDetail(r.dataset.id); };
   $("#list").onclick = open; $("#list").onkeydown = e => { if (e.key === "Enter") open(e); }; $("#dlist").onclick = open;
-  const evOpen = e => { const r = e.target.closest("[data-id][data-lat]"); if (r) { openDetail(r.dataset.id); flyTo(r); } };
+  const evOpen = e => {
+    const r = e.target.closest("[data-id][data-lat]"); if (!r) return;
+    if (r.classList.contains("alc") && r.dataset.evid) dismissAlert(r.dataset.evid);
+    openDetail(r.dataset.id); flyTo(r);
+  };
   $("#alist").onclick = evOpen; $("#alertcard").onclick = evOpen; $("#alertfs").onclick = evOpen;
   $("#sclose").onclick = closeSheet; $("#rp-close").onclick = closeRapor; $("#rp-print").onclick = () => window.print(); $("#rclose").onclick = () => { closeRecap(); setNav(tab === "alerts" ? "alerts" : "dash"); };
   $("#snav").onclick = e => { const b = e.target.closest("[data-s]"); if (b) { stab = b.dataset.s; renderSheet(); } };
