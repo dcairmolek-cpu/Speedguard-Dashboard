@@ -340,6 +340,7 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
           <div class="kt" id="kp-over"><span>Overspeed</span><b id="k-over">0</b></div>
           <div class="kt"><span>Bermasalah</span><b id="k-bad">0</b></div>
           <div class="kt"><span>Sopir aktif</span><b id="k-all">0</b></div>
+          <div class="kt"><span>Armada aktif</span><b id="k-veh">0 / 0</b></div>
           <div class="ksp"></div><div id="fsclock"></div>
         </div>
         <div class="mapbox">
@@ -543,7 +544,9 @@ function render() {
   const all = activeRows();
   const n = k => all.filter(d => d.st === k).length;
   $("#k-on").textContent = all.filter(d => ["on", "over", "gps"].includes(d.st)).length;
-  $("#k-over").textContent = n("over"); $("#k-bad").textContent = n("gps") + n("stale"); $("#k-all").textContent = all.length;
+  $("#k-over").textContent = n("over"); $("#k-bad").textContent = n("gps") + n("stale"); $("#k-all").textContent = all.length;const vTot = vehicles.filter(v => v.active).length;
+const inUse = new Set(all.filter(d => ["on", "over", "gps"].includes(d.st) && d.plate).map(d => d.plate));
+$("#k-veh").textContent = vehicles.filter(v => v.active && inUse.has(v.plate)).length + " / " + vTot;
   $("#kp-over").classList.toggle("alert", n("over") > 0);
   const count = k => k === "all" ? all.length : k === "on" ? all.filter(d => ["on", "over", "gps"].includes(d.st)).length : n(k);
   $("#chips").innerHTML = FILTERS.map(([k, t]) => `<button data-f="${k}" aria-pressed="${k === filter}">${t}<b>${count(k)}</b></button>`).join("");
