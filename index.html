@@ -601,7 +601,7 @@ $("#k-veh").textContent = vehicles.filter(v => v.active && inUse.has(v.plate)).l
     .filter(d => !ql || (d.full_name + " " + (d.plate || "")).toLowerCase().includes(ql));
   $("#list").innerHTML = list.length ? list.map(rowHtml).join("") : `<li class="empty">${all.length ? "Tidak ada sopir pada filter ini." : "Belum ada sopir. Tambahkan lewat tombol Tambah sopir."}</li>`;
   $("#dlist").innerHTML = all.map(rowHtml).join("");
-  renderAlerts(); renderToday(all); renderPick(all); renderDetail(); paintDC(); renderGauge(all); renderChartCard(); drawMarkers();
+  renderAlerts(); renderToday(all); renderPick(all); renderDetail(); paintDC(); drawDC(); renderGauge(all); renderChartCard(); drawMarkers();
 }
 function renderAlerts() {
   const ev = events.filter(e => ALERT_TYPES.includes(e.type));
@@ -1431,6 +1431,19 @@ async function paintDC() {
     <dl class="mini"><div><dt>Jarak ke DC</dt><dd>${f1(road)} km</dd></div>
     <div><dt>Perkiraan tiba</dt><dd>${eta == null ? "–" : "± " + eta + " mnt"}</dd></div></dl>
     <p class="hint" style="font-size:12px">${moving ? "" : "Sopir sedang berhenti. "}Dihitung dengan rata-rata armada ${f1(spd)} km/jam, faktor jalan ${String(S.road_factor ?? 1.3).replace(".", ",")}. Perkiraan, bukan jaminan.</p></div>`);
+}
+ // ---------- titik DC di peta ----------
+let dcMarker = null;
+function drawDC() {
+  if (!map) return;
+  if (S.dc_lat == null || S.dc_lng == null) { if (dcMarker) { dcMarker.remove(); dcMarker = null; } return; }
+  if (!dcMarker) {
+    const icon = L.divIcon({ className: "", iconSize: [34, 34], iconAnchor: [17, 17],
+      html: '<div style="width:34px;height:34px;border-radius:10px;background:#1d1f23;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)">DC</div>' });
+    dcMarker = L.marker([S.dc_lat, S.dc_lng], { icon, zIndexOffset: 500 }).addTo(map).bindTooltip("DC Air Molek");
+  } else {
+    dcMarker.setLatLng([S.dc_lat, S.dc_lng]);
+  }
 }
  // ---------- data & realtime ----------
 async function load() {
