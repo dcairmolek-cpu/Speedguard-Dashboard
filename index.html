@@ -273,7 +273,62 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
  #rapor .sbx{box-shadow:none;height:auto;width:100%;display:block}#rapor .sh-h button,.rtool2,.rtabs,.noprint{display:none!important}
  #rbody2{overflow:visible!important;padding:0!important}
 }
- #navtog{display:none}
+/* ===== tampilan HP (hanya berlaku di layar ≤ 640px; PC tidak terpengaruh) ===== */
+@media (max-width:640px){
+  body{font-size:14px}
+  #app{padding:8px;gap:10px}
+  .side{padding:10px;gap:8px}
+  .brandrow{font-size:16px}
+  .nav{display:flex;overflow-x:auto;gap:6px;scrollbar-width:none;padding-bottom:2px}
+  .nav::-webkit-scrollbar{display:none}
+  .nav button{flex:none;width:auto;padding:8px 12px;font-size:13px;white-space:nowrap;min-height:40px}
+  .side .foot{margin:0}
+  .mhead{gap:8px 10px;align-items:center}
+  .mhead .ttl h1{font-size:19px;white-space:nowrap}
+  .mhead .ttl span{font-size:12px}
+  #pick{flex:1 1 100%;min-width:0;min-height:44px;font-size:15px}
+  .sbox{width:100%;order:5;flex:1 1 100%}
+  .sbox input{min-height:44px;font-size:15px}
+  .live{font-size:12px}
+  #clock{display:none}
+  .ibtn{width:44px;height:44px}
+  .btn{min-height:40px}
+  #b-install{display:none}
+  .kstrip{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px}
+  .kstrip .ksp,#fsclock{display:none}
+  .kt{padding:6px 10px;justify-content:space-between;min-width:0}
+  .kt span{font-size:12px}
+  .kt b{font-size:18px}
+  .mapcard{min-height:0;height:auto}
+  .mapbox{height:60vh;min-height:340px}
+  .mid{height:auto}
+  .ovl.tl{left:8px;top:8px;right:8px}
+  .seg{width:100%}
+  .seg button{flex:1;padding:8px 6px;font-size:13px;min-height:40px}
+  .ovl.br{right:8px;bottom:14px}
+  .ctl button{width:44px;height:44px}
+  .listcard{max-height:none}
+  .tabs button{min-height:44px;font-size:15px}
+  .row{padding:12px 10px;grid-template-columns:40px 1fr auto}
+  .row .av{width:40px;height:40px}
+  .spd b{font-size:22px}
+  .chips button{min-height:36px;font-size:14px;padding:6px 12px}
+  .bot{grid-template-columns:1fr;gap:10px}
+  .bc{min-height:0}
+  .drawer{width:calc(100% - 16px);left:8px;right:8px;top:auto;bottom:8px;max-height:55%}
+  .mbox{width:calc(100% - 24px);max-height:88vh}
+  .mbox input,.mbox select{min-height:44px;font-size:16px}
+  .sbx{height:100%;width:100%;border-radius:0}
+  .sh-b{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  #snav{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px}
+  #snav button{white-space:nowrap;min-height:40px}
+  .fld{grid-template-columns:1fr;gap:8px}
+  .tw{overflow-x:auto}
+  .toast{font-size:14px}
+}
+
+/* ===== laci menu kiri (HP saja; PC tidak berubah) ===== */
+#navtog{display:none}
 #navshade{display:none}
 @media (max-width:640px){
   #navtog{display:grid;width:44px;height:44px}
@@ -281,18 +336,15 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
   .side{position:fixed;top:0;left:0;bottom:0;width:270px;max-width:82vw;z-index:4500;flex-direction:column;align-items:stretch;overflow-y:auto;border-radius:0 18px 18px 0;box-shadow:0 10px 40px rgba(0,0,0,.35);transform:translateX(-105%);transition:transform .25s ease;background:var(--card);padding:14px}
   body.nav-open .side{transform:translateX(0)}
   .side .welcome,.side .fleetsel,.side .redcard,.side .addcard{display:flex}
+  .side .welcome{display:flex}
+  .side .fleetsel{display:flex}
   .side .redcard{display:block}
   .side .addcard{display:grid}
   .nav{display:grid;overflow:visible;gap:4px}
   .nav button{width:100%;padding:12px 12px;font-size:15px;min-height:46px;white-space:normal}
-  .mid{height:auto!important;min-height:0!important;display:flex;flex-direction:column}
-  .mapcard{flex:none}
-  .listcard{flex:none;min-height:auto;max-height:none;overflow:visible;height:auto}
-  .pane{flex:none}
   .side .foot{display:block;margin-top:auto}
 }
-.pane[hidden]{display:none!important}
- /* ===== HP: susunan daftar dibuat blok biasa (tidak bergantung tinggi layar) ===== */
+/* ===== HP: susunan daftar dibuat blok biasa (tidak bergantung tinggi layar) ===== */
 @media (max-width:640px){
   .mid{display:block!important;height:auto!important;min-height:0!important}
   .mapcard{display:block!important;height:auto!important;flex:none}
@@ -300,22 +352,20 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
   .listcard .tabs{display:flex;gap:6px}
   .listcard .tabs button{flex:1;min-height:44px}
   .pane{display:block!important;flex:none!important;height:auto!important;overflow:visible!important}
+  .pane[hidden]{display:none!important}
   #list,#alist{overflow:visible!important;flex:none!important;max-height:none!important}
 }
- /* ===== HP: baris filter bisa digeser ke samping, ukuran tab tetap ===== */
-@media (max-width:640px){
-  .chips{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;padding:10px 12px}
-  .chips button{flex:none}
-}
- /* ===== HP: cegah layar melebar (kolom grid tidak boleh lebih lebar dari layar) ===== */
+/* ===== HP: cegah layar melebar (kolom grid tidak boleh lebih lebar dari layar) ===== */
 @media (max-width:640px){
   #app{grid-template-columns:minmax(0,1fr)!important}
   .main,.mid,.bot,.mapcard,.listcard,.pane,.chips{min-width:0!important;max-width:100%!important}
   .listcard .tabs button{min-width:0!important;flex:1 1 0!important}
   html,body{overflow-x:hidden}
-  .mapcard{height:auto!important;min-height:0!important}
-  .mapbox{height:60vh!important;min-height:340px!important;flex:none!important;position:relative}
-  #map{position:absolute;inset:0;height:100%!important}
+}
+/* ===== HP: baris filter bisa digeser ke samping, ukuran tab tetap ===== */
+@media (max-width:640px){
+  .chips{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;width:100%;-webkit-overflow-scrolling:touch;padding:10px 12px}
+  .chips button{flex:none}
 }
 </style>
 </head>
@@ -366,7 +416,7 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
 
   <div class="main">
     <header class="mhead">
-     <button class="ibtn" id="navtog" aria-label="Buka menu" title="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <button class="ibtn" id="navtog" aria-label="Buka menu" title="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       <div class="ttl"><h1>Pelacakan armada</h1><span id="sub">DC Air Molek</span></div>
       <select id="pick" aria-label="Pilih sopir"><option value="">Pilih sopir</option></select>
       <div class="sp"></div>
@@ -385,7 +435,6 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
           <div class="kt" id="kp-over"><span>Overspeed</span><b id="k-over">0</b></div>
           <div class="kt"><span>Bermasalah</span><b id="k-bad">0</b></div>
           <div class="kt"><span>Sopir aktif</span><b id="k-all">0</b></div>
-          <div class="kt"><span>Armada aktif</span><b id="k-veh">0 / 0</b></div>
           <div class="ksp"></div><div id="fsclock"></div>
         </div>
         <div class="mapbox">
@@ -421,7 +470,7 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
   </div>
 </div>
 
-<div id="navshade" hidden></div> 
+<div id="navshade" hidden></div>
 <div id="sheet" hidden>
   <div class="sbx" role="dialog" aria-label="Pengaturan">
     <div class="sh-h"><h2>Pengaturan</h2><button class="btn sm" id="sclose">Tutup</button></div>
@@ -571,28 +620,16 @@ function rowHtml(d) {
     <small>${LABEL[d.st]}${d.st === "off" ? "" : " · " + ago(d.recorded_at || d.received_at)}</small></div>
     <div class="spd"><b>${sp}</b><small>km/jam</small></div></li>`;
 }
- // ---------- peringatan yang sudah ditutup (disimpan di browser) ----------
-function dismissedSet() {
-  try { return new Set(JSON.parse(localStorage.getItem("sg-dismissed") || "[]").map(Number)); } catch (e) { return new Set(); }
-}
-function dismissAlert(id) {
-  const s = dismissedSet(); s.add(Number(id));
-  try { localStorage.setItem("sg-dismissed", JSON.stringify([...s].slice(-300))); } catch (e) {}
-  document.querySelectorAll("#alertcard,#alertfs").forEach(c => { c.hidden = true; c.innerHTML = ""; });
-  render();
-}
 function alertHtml(e) {
   const i = evInfo(e);
-  return `<button class="alc ${e.type === "sos" ? "sos" : ""}" data-id="${e.driver_id}" data-evid="${e.id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
+  return `<button class="alc ${e.type === "sos" ? "sos" : ""}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
     <div><small>Peringatan terbaru</small><b>${esc(i.title)}</b><span>${esc(i.name)} · ${fmtT(e.occurred_at)}</span></div></button>`;
 }
 function render() {
   const all = activeRows();
   const n = k => all.filter(d => d.st === k).length;
   $("#k-on").textContent = all.filter(d => ["on", "over", "gps"].includes(d.st)).length;
-  $("#k-over").textContent = n("over"); $("#k-bad").textContent = n("gps") + n("stale"); $("#k-all").textContent = all.length;const vTot = vehicles.filter(v => v.active).length;
-const inUse = new Set(all.filter(d => ["on", "over", "gps"].includes(d.st) && d.plate).map(d => d.plate));
-$("#k-veh").textContent = vehicles.filter(v => v.active && inUse.has(v.plate)).length + " / " + vTot;
+  $("#k-over").textContent = n("over"); $("#k-bad").textContent = n("gps") + n("stale"); $("#k-all").textContent = all.length;
   $("#kp-over").classList.toggle("alert", n("over") > 0);
   const count = k => k === "all" ? all.length : k === "on" ? all.filter(d => ["on", "over", "gps"].includes(d.st)).length : n(k);
   $("#chips").innerHTML = FILTERS.map(([k, t]) => `<button data-f="${k}" aria-pressed="${k === filter}">${t}<b>${count(k)}</b></button>`).join("");
@@ -601,19 +638,18 @@ $("#k-veh").textContent = vehicles.filter(v => v.active && inUse.has(v.plate)).l
     .filter(d => !ql || (d.full_name + " " + (d.plate || "")).toLowerCase().includes(ql));
   $("#list").innerHTML = list.length ? list.map(rowHtml).join("") : `<li class="empty">${all.length ? "Tidak ada sopir pada filter ini." : "Belum ada sopir. Tambahkan lewat tombol Tambah sopir."}</li>`;
   $("#dlist").innerHTML = all.map(rowHtml).join("");
-  renderAlerts(); renderToday(all); renderPick(all); renderDetail(); renderGauge(all); renderChartCard(); drawMarkers();
+  renderAlerts(); renderToday(all); renderPick(all); renderDetail(); paintDC(); renderGauge(all); renderChartCard(); drawMarkers();
 }
 function renderAlerts() {
   const ev = events.filter(e => ALERT_TYPES.includes(e.type));
   const recent = ev.filter(e => Date.now() - new Date(e.occurred_at) < 864e5);
-  ["#abadge", "#nbadge", "#bbadge"].forEach(s => { $(s).textContent = recent.filter(e => !dismissedSet().has(Number(e.id))).length || ""; });
+  ["#abadge", "#nbadge", "#bbadge"].forEach(s => { $(s).textContent = recent.length || ""; });
   $("#alist").innerHTML = ev.length ? ev.slice(0, 80).map(e => {
     const i = evInfo(e);
     return `<li class="ev ${e.type}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
       <div><b>${esc(i.title)}</b><small>${esc(i.name)} · ${esc(i.sub)}</small></div><time>${fmtDT(e.occurred_at)}</time></li>`;
   }).join("") : `<li class="empty">Belum ada peringatan.</li>`;
-  const seen = dismissedSet();
-  const last = recent.find(e => !seen.has(Number(e.id))) || null;
+  const last = recent[0];
   ["#alertcard", "#alertfs"].forEach(s => { const c = $(s); c.hidden = !last; if (last) c.innerHTML = alertHtml(last); });
 }
 function todayStats(all) {
@@ -893,13 +929,13 @@ function info(title, html) {
 }
 
 // ---------- pengaturan ----------
-const STABS = [["rules", "Aturan"], ["notify", "Notifikasi"], ["drivers", "Sopir"], ["vehicles", "Kendaraan"], ["staff", "Pengguna"], ["audit", "Riwayat perubahan"]];
+const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["drivers", "Sopir"], ["vehicles", "Kendaraan"], ["staff", "Pengguna"], ["audit", "Riwayat perubahan"]];
 let stab = "rules";
 function openSettings(t) { if (!isAdmin) return; stab = t || stab; $("#sheet").hidden = false; renderSheet(); }
 function closeSheet() { $("#sheet").hidden = true; setNav(tab === "alerts" ? "alerts" : "dash"); }
 function renderSheet() {
   $("#snav").innerHTML = STABS.map(([k, t]) => `<button data-s="${k}" ${k === stab ? 'aria-current="true"' : ""}>${t}</button>`).join("");
-  ({ rules: tabRules, notify: tabNotify, drivers: tabDrivers, vehicles: tabVehicles, staff: tabStaff, audit: tabAudit })[stab]();
+  ({ rules: tabRules, dc: tabDC, notify: tabNotify, drivers: tabDrivers, vehicles: tabVehicles, staff: tabStaff, audit: tabAudit })[stab]();
 }
 function setFleet(n) { fleetName = n; $("#fleet").textContent = n; $("#sub").textContent = n; document.title = "SpeedGuard · " + n; }
 async function saveSettings(v) {
@@ -1391,6 +1427,48 @@ async function paintHot(body) {
   body.querySelector(".hot ul").onclick = e => { const li = e.target.closest("[data-la]"); if (li) draw([+li.dataset.la, +li.dataset.ln]); };
 }
 
+// ---------- lokasi DC dan perkiraan tiba ----------
+function tabDC() {
+  $("#sbody").innerHTML = `<p class="lead">Titik DC dipakai untuk menghitung jarak dan perkiraan tiba. Ambil koordinat dari Google Maps: klik kanan lokasi DC, lalu salin angka pertama.</p>
+    <div class="blk"><h3>Lokasi DC</h3>
+      <div class="fld"><div class="fl"><label for="dc-lat">Latitude</label><small>Contoh: 0.5123</small></div><div class="fi"><input id="dc-lat" type="number" step="0.00001" value="${S.dc_lat ?? ""}"></div></div>
+      <div class="fld"><div class="fl"><label for="dc-lng">Longitude</label><small>Contoh: 101.4567</small></div><div class="fi"><input id="dc-lng" type="number" step="0.00001" value="${S.dc_lng ?? ""}"></div></div>
+      <div class="fld"><div class="fl"><label for="dc-f">Faktor jalan</label><small>Jarak jalan ≈ jarak lurus × faktor. Mulai dari 1,3.</small></div><div class="fi"><input id="dc-f" type="number" step="0.05" min="1" max="2" value="${S.road_factor ?? 1.3}"></div></div>
+    </div>
+    <div class="foot"><span class="err" id="dc-msg"></span><button class="btn pri" id="dc-save">Simpan lokasi DC</button></div>`;
+  $("#dc-save").onclick = async () => {
+    const la = Number($("#dc-lat").value), ln = Number($("#dc-lng").value), f = Number($("#dc-f").value);
+    if (!(la >= -90 && la <= 90 && ln >= -180 && ln <= 180)) return ($("#dc-msg").textContent = "Latitude atau longitude tidak valid.");
+    if (!(f >= 1 && f <= 2)) return ($("#dc-msg").textContent = "Faktor jalan harus antara 1 dan 2.");
+    const err = await saveSettings({ dc_lat: la, dc_lng: ln, road_factor: f });
+    $("#dc-msg").textContent = err || "";
+    if (!err) toast("Lokasi DC tersimpan.");
+  };
+}
+let avgSpd = null, avgAt = 0;
+async function getAvgSpeed() {
+  if (Date.now() - avgAt < 120000 && avgSpd !== null) return avgSpd;
+  const { data, error } = await sb.rpc("fleet_avg_speed", { p_days: 7 });
+  if (!error) { avgSpd = Number(data) || 0; avgAt = Date.now(); }
+  return avgSpd ?? 0;
+}
+async function paintDC() {
+  const box = $("#dv"), d = sel && drivers.get(sel);
+  if (!box || !d || d.lat == null || S.dc_lat == null || S.dc_lng == null) return;
+  if (stateOf(d) === "off") return;
+  const straight = km({ lat: d.lat, lng: d.lng }, { lat: S.dc_lat, lng: S.dc_lng });
+  const road = straight * (S.road_factor || 1.3);
+  const spd = await getAvgSpeed();
+  if (sel !== d.id) return;                      // sopir sudah diganti saat menunggu
+  const eta = spd > 0 ? Math.round(road / spd * 60) : null;
+  const moving = d.speed_kmh >= 3;
+  box.querySelectorAll(".dcbox").forEach(e => e.remove());
+  box.insertAdjacentHTML("beforeend", `<div class="dcbox" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
+    <dl class="mini"><div><dt>Jarak ke DC</dt><dd>${f1(road)} km</dd></div>
+    <div><dt>Perkiraan tiba</dt><dd>${eta == null ? "–" : "± " + eta + " mnt"}</dd></div></dl>
+    <p class="hint" style="font-size:12px">${moving ? "" : "Sopir sedang berhenti. "}Dihitung dengan rata-rata armada ${f1(spd)} km/jam, faktor jalan ${String(S.road_factor ?? 1.3).replace(".", ",")}. Perkiraan, bukan jaminan.</p></div>`);
+}
+
 // ---------- data & realtime ----------
 async function load() {
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
@@ -1467,11 +1545,7 @@ async function enter() {
   $("#chips").onclick = e => { const f = e.target.closest("[data-f]"); if (f) { filter = f.dataset.f; render(); } };
   const open = e => { const r = e.target.closest(".row"); if (r) openDetail(r.dataset.id); };
   $("#list").onclick = open; $("#list").onkeydown = e => { if (e.key === "Enter") open(e); }; $("#dlist").onclick = open;
-  const evOpen = e => {
-    const r = e.target.closest("[data-id][data-lat]"); if (!r) return;
-    if (r.classList.contains("alc") && r.dataset.evid) dismissAlert(r.dataset.evid);
-    openDetail(r.dataset.id); flyTo(r);
-  };
+  const evOpen = e => { const r = e.target.closest("[data-id][data-lat]"); if (r) { openDetail(r.dataset.id); flyTo(r); } };
   $("#alist").onclick = evOpen; $("#alertcard").onclick = evOpen; $("#alertfs").onclick = evOpen;
   $("#sclose").onclick = closeSheet; $("#rp-close").onclick = closeRapor; $("#rp-print").onclick = () => window.print(); $("#rclose").onclick = () => { closeRecap(); setNav(tab === "alerts" ? "alerts" : "dash"); };
   $("#snav").onclick = e => { const b = e.target.closest("[data-s]"); if (b) { stab = b.dataset.s; renderSheet(); } };
@@ -1502,6 +1576,7 @@ $("#b-out").onclick = async () => { await sb.auth.signOut(); location.reload(); 
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; $("#b-install").hidden = false; });
 $("#b-install").onclick = async () => { if (!deferredInstall) return; deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; $("#b-install").hidden = true; };
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+// laci menu HP
 $("#navtog").onclick = () => document.body.classList.toggle("nav-open");
 $("#navshade").onclick = () => document.body.classList.remove("nav-open");
 $("#nav").addEventListener("click", () => document.body.classList.remove("nav-open"));
