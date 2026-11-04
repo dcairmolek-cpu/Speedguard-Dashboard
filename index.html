@@ -526,10 +526,10 @@ function rowHtml(d) {
 }
  // ---------- peringatan yang sudah ditutup (disimpan di browser) ----------
 function dismissedSet() {
-  try { return new Set(JSON.parse(localStorage.getItem("sg-dismissed") || "[]")); } catch (e) { return new Set(); }
+  try { return new Set(JSON.parse(localStorage.getItem("sg-dismissed") || "[]").map(Number)); } catch (e) { return new Set(); }
 }
 function dismissAlert(id) {
-  const s = dismissedSet(); s.add(id);
+  const s = dismissedSet(); s.add(Number(id));
   try { localStorage.setItem("sg-dismissed", JSON.stringify([...s].slice(-300))); } catch (e) {}
   document.querySelectorAll("#alertcard,#alertfs").forEach(c => { c.hidden = true; c.innerHTML = ""; });
   render();
@@ -557,14 +557,14 @@ function render() {
 function renderAlerts() {
   const ev = events.filter(e => ALERT_TYPES.includes(e.type));
   const recent = ev.filter(e => Date.now() - new Date(e.occurred_at) < 864e5);
-  ["#abadge", "#nbadge", "#bbadge"].forEach(s => { $(s).textContent = recent.filter(e => !dismissedSet().has(e.id)).length || ""; });
+  ["#abadge", "#nbadge", "#bbadge"].forEach(s => { $(s).textContent = recent.filter(e => !dismissedSet().has(Number(e.id)).length || ""; });
   $("#alist").innerHTML = ev.length ? ev.slice(0, 80).map(e => {
     const i = evInfo(e);
     return `<li class="ev ${e.type}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
       <div><b>${esc(i.title)}</b><small>${esc(i.name)} · ${esc(i.sub)}</small></div><time>${fmtDT(e.occurred_at)}</time></li>`;
   }).join("") : `<li class="empty">Belum ada peringatan.</li>`;
   const seen = dismissedSet();
-  const last = recent.find(e => !seen.has(e.id)) || null;
+  const last = recent.find(e => !seen.has(Number(e.id)) || null;
   ["#alertcard", "#alertfs"].forEach(s => { const c = $(s); c.hidden = !last; if (last) c.innerHTML = alertHtml(last); });
 }
 function todayStats(all) {
