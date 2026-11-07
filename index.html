@@ -353,6 +353,7 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
       <button data-n="alerts"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Peringatan<em id="nbadge"></em></button>
       <button data-n="recap"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Rekap</button>
       <button data-n="rapor"><svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 13l2.5 2.5L16 10"/></svg>Rapor sopir</button>
+      <button data-n="fleetlist"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Status armada</button>
       <button data-n="drivers" class="adm"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.7 0 4.5 1.8 4.5 4.5"/></svg>Sopir</button>
       <button data-n="vehicles" class="adm"><svg viewBox="0 0 24 24"><path d="M2 6h11v10H2z"/><path d="M13 9h4l3 3v4h-7"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/></svg>Kendaraan</button>
       <button data-n="audit" class="adm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Riwayat</button>
@@ -601,7 +602,7 @@ $("#k-veh").textContent = vehicles.filter(v => v.active && inUse.has(v.plate)).l
     .filter(d => !ql || (d.full_name + " " + (d.plate || "")).toLowerCase().includes(ql));
   $("#list").innerHTML = list.length ? list.map(rowHtml).join("") : `<li class="empty">${all.length ? "Tidak ada sopir pada filter ini." : "Belum ada sopir. Tambahkan lewat tombol Tambah sopir."}</li>`;
   $("#dlist").innerHTML = all.map(rowHtml).join("");
-  renderAlerts(); renderToday(all); renderPick(all); renderDetail(); paintDC(); drawDC(); renderGauge(all); renderChartCard(); drawMarkers();
+  renderAlerts(); renderToday(all); renderPick(all); renderDetail(); paintDC(); drawDC(); paintEnd(); renderGauge(all); renderChartCard(); drawMarkers();
 }
 function renderAlerts() {
   const ev = events.filter(e => ALERT_TYPES.includes(e.type));
@@ -895,7 +896,7 @@ function info(title, html) {
 // ---------- pengaturan ----------
 const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["drivers", "Sopir"], ["vehicles", "Kendaraan"], ["staff", "Pengguna"], ["audit", "Riwayat perubahan"]];
 let stab = "rules";
-function openSettings(t) { if (!isAdmin) return; stab = t || stab; $("#sheet").hidden = false; renderSheet(); }
+function openSettings(t) { if (!isAdmin) return; stab = t || stab; $("#sheet .sh-h h2").textContent = "Pengaturan"; $("#snav").hidden = false; $("#sheet").hidden = false; renderSheet(); }
 function closeSheet() { $("#sheet").hidden = true; setNav(tab === "alerts" ? "alerts" : "dash"); }
 function renderSheet() {
   $("#snav").innerHTML = STABS.map(([k, t]) => `<button data-s="${k}" ${k === stab ? 'aria-current="true"' : ""}>${t}</button>`).join("");
@@ -1445,6 +1446,181 @@ function drawDC() {
     dcMarker.setLatLng([S.dc_lat, S.dc_lng]);
   }
 }
+ // ---------- status armada (monitoring kendaraan) ----------
+const STAT = {
+  service: ["Sedang service", "#2563eb"], bertugas: ["Sedang bertugas", "#2f9e6a"],
+  dokumen_habis: ["STNK/KIR habis", "#d11f2e"], perlu_service: ["Perlu service", "#e29a1b"],
+  dokumen_akan_habis: ["STNK/KIR akan habis", "#e29a1b"], akan_service: ["Akan service", "#8a94a6"],
+  data_belum_lengkap: ["Data belum lengkap", "#9aa0a8"], stand_by: ["Stand by", "#4b5563"] };
+let vsCache = null, vsAt = 0, vsFilter = "semua", vsQuery = "", upOpen = false, upText = "", upRows = null;
+async function getVehicleStatus(force) {
+  if (!force && vsCache && Date.now() - vsAt < 60000) return vsCache;
+  const { data, error } = await sb.from("vehicle_status").select("*").order("plate");
+  if (error) { toast("Gagal memuat status armada: " + error.message, "bad"); return vsCache || []; }
+  vsCache = data || []; vsAt = Date.now(); return vsCache;
+}
+const nfmt = n => Number(n).toLocaleString("id-ID");
+const sisaTxt = v => v == null ? "–" : v < 0 ? "lewat " + nfmt(-v) : nfmt(v);
+const docTxt = s => s == null ? "–" : s < 0 ? '<b style="color:var(--crim)">habis</b>' : s + " hari";
+function openFleet() { $("#sheet").hidden = false; $("#sheet .sh-h h2").textContent = "Status armada"; $("#snav").hidden = true; renderFleet(false); }
+async function renderFleet(force) { await getVehicleStatus(force); drawFleet(); }
+function drawFleet() {
+  const box = $("#sbody");
+  if (!box.querySelector("#fv-body")) {
+    box.innerHTML = `<div class="bar-top" style="flex-wrap:wrap;gap:8px">
+        <input id="fv-q" type="search" placeholder="Cari plat, merek, atau sopir" style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:999px;background:var(--w)">
+        <button class="btn sm" id="fv-refresh">Muat ulang</button>
+        ${isAdmin ? '<button class="btn sm" id="fv-up-toggle">Unggah data</button>' : ""}</div>
+      <div id="fv-chips" style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap"></div>
+      <div id="fv-up"></div><div id="fv-body"></div>`;
+    $("#fv-q").oninput = e => { vsQuery = e.target.value; drawFleetParts(); };
+    $("#fv-refresh").onclick = async () => { await getVehicleStatus(true); drawFleetParts(); };
+    const up = $("#fv-up-toggle"); if (up) up.onclick = () => { upOpen = !upOpen; drawFleetParts(); };
+    $("#fv-chips").onclick = e => { const b = e.target.closest("[data-k]"); if (b) { vsFilter = b.dataset.k; drawFleetParts(); } };
+    $("#fv-body").onclick = async e => {
+      const b = e.target.closest("[data-svc]"); if (!b || !isAdmin) return;
+      const { error } = await sb.from("vehicles").update({ status_manual: b.dataset.on === "1" ? "service" : "normal" }).eq("id", b.dataset.svc);
+      if (error) return toast(error.message, "bad");
+      await getVehicleStatus(true); drawFleetParts();
+    };
+    $("#fv-up").oninput = e => { if (e.target.id === "up-txt") upText = e.target.value; };
+    $("#fv-up").onclick = async e => {
+      if (e.target.id === "up-prev") { upRows = parseUpload(upText); drawFleetParts(); }
+      if (e.target.id === "up-save") {
+        const ok = (upRows || []).filter(r => !r.err.length);
+        if (!ok.length) return;
+        e.target.disabled = true; e.target.textContent = "Menyimpan…";
+        const res = await saveUpload(ok);
+        toast(`${res.ok} kendaraan disimpan${res.fail.length ? ", " + res.fail.length + " gagal" : ""}.`, res.fail.length ? "bad" : "");
+        if (res.fail.length) alert("Gagal:\n" + res.fail.join("\n"));
+        upRows = null; upText = ""; upOpen = false;
+        await load(); await getVehicleStatus(true); drawFleetParts();
+      }
+    };
+  }
+  drawFleetParts();
+}
+function drawFleetParts() {
+  const list = vsCache || [];
+  const counts = {}; list.forEach(v => counts[v.status_utama] = (counts[v.status_utama] || 0) + 1);
+  const chips = [["semua", "Semua", list.length]].concat(Object.keys(STAT).filter(k => counts[k]).map(k => [k, STAT[k][0], counts[k]]));
+  $("#fv-chips").innerHTML = chips.map(([k, l, n]) => `<button class="btn sm${vsFilter === k ? " pri" : ""}" data-k="${k}">${esc(l)} <b>${n}</b></button>`).join("");
+  const q = vsQuery.trim().toLowerCase();
+  const rows = list.filter(v => (vsFilter === "semua" || v.status_utama === vsFilter) &&
+    (!q || `${v.plate} ${v.merek_tipe || ""} ${v.sopir_aktif || ""}`.toLowerCase().includes(q)));
+  $("#fv-body").innerHTML = `<div class="tw"><table class="tbl"><thead><tr><th>Plat</th><th>Merek</th><th>Status</th><th>Sopir</th>
+      <th>Sisa km</th><th>Sisa hari</th><th>STNK</th><th>KIR</th>${isAdmin ? "<th></th>" : ""}</tr></thead><tbody>
+    ${rows.map(v => { const s = STAT[v.status_utama] || ["–", "#999"]; return `<tr>
+      <td><span class="plate">${esc(v.plate)}</span></td><td>${esc(v.merek_tipe || "–")}</td>
+      <td><span style="background:${s[1]};color:#fff;font-weight:700;font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap">${esc(s[0])}</span></td>
+      <td>${esc(v.sopir_aktif || "–")}</td><td>${sisaTxt(v.sisa_km)}</td><td>${sisaTxt(v.sisa_hari)}</td>
+      <td>${docTxt(v.stnk_sisa)}</td><td>${docTxt(v.kir_sisa)}</td>
+      ${isAdmin ? `<td class="act"><button class="btn sm" data-svc="${v.id}" data-on="${v.status_manual === "service" ? "0" : "1"}">${v.status_manual === "service" ? "Selesai service" : "Tandai service"}</button></td>` : ""}</tr>`; }).join("") ||
+      `<tr><td colspan="9" class="muted">Tidak ada kendaraan yang cocok.</td></tr>`}</tbody></table></div>`;
+  $("#fv-up").innerHTML = isAdmin && upOpen ? uploadPanel() : "";
+}
+const UP_COLS = ["Plat","Nama / keterangan","Merek/tipe","Batas kecepatan","Odometer terakhir","Tanggal odometer","Interval km","Interval bulan","Service terakhir (tanggal)","Odometer service terakhir","STNK","KIR","Status manual"];
+function uploadPanel() {
+  const rows = upRows;
+  const pre = rows ? `<div style="max-height:260px;overflow:auto;margin-top:8px"><table class="tbl"><thead><tr><th>Baris</th><th>Plat</th><th>Aksi</th><th>Hasil</th></tr></thead><tbody>
+    ${rows.map(r => `<tr style="${r.err.length ? "background:#fdf3f1" : ""}"><td>${r.line}</td><td>${esc(r.plate || "–")}</td>
+      <td>${r.err.length ? "–" : r.isNew ? "Tambah baru" : "Perbarui"}</td>
+      <td>${r.err.length ? '<b style="color:var(--crim)">' + esc(r.err.join("; ")) + "</b>" : '<span style="color:var(--on)">OK</span>'}</td></tr>`).join("")}</tbody></table></div>` : "";
+  const ok = rows ? rows.filter(r => !r.err.length).length : 0;
+  return `<div class="card" style="padding:14px;margin-bottom:10px">
+    <b>Unggah data kendaraan</b>
+    <p class="hint" style="margin:4px 0 8px">Salin dari spreadsheet (kolom sama dengan template: ${esc(UP_COLS.join(" | "))}). Tempel di kotak ini, lalu Pratinjau sebelum menyimpan. Baris dengan kesalahan tidak ikut tersimpan.</p>
+    <textarea id="up-txt" rows="6" style="width:100%;font:12px ui-monospace,monospace;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--w)">${esc(upText)}</textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn sm" id="up-prev">Pratinjau</button>
+      <button class="btn sm pri" id="up-save" ${ok ? "" : "disabled"}>Simpan ${ok} baris OK</button></div>
+    ${pre}</div>`;
+}
+function pDate(s) {
+  s = String(s ?? "").trim(); if (!s) return null;
+  let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  throw new Error("tanggal tidak dikenali: " + s);
+}
+function pInt(s) {
+  s = String(s ?? "").trim().replace(/[\s.,]/g, ""); if (!s) return null;
+  if (!/^\d+$/.test(s)) throw new Error("angka tidak valid: " + s);
+  return Number(s);
+}
+function parseUpload(text) {
+  const out = [];
+  String(text || "").split(/\r?\n/).forEach((ln, i) => {
+    if (!ln.trim()) return;
+    const c = ln.includes("\t") ? ln.split("\t") : ln.split(";");
+    if (/^plat$/i.test((c[0] || "").trim())) return;
+    const r = { line: i + 1, err: [] };
+    try {
+      const plate = (c[0] || "").trim().toUpperCase().replace(/\s+/g, " ");
+      if (!plate) throw new Error("plat kosong");
+      r.plate = plate;
+      r.name = (c[1] || "").trim() || null;
+      r.merek_tipe = (c[2] || "").trim() || null;
+      r.speed_limit_kmh = pInt(c[3]);
+      r.odometer_km = pInt(c[4]);
+      const od = pDate(c[5]);
+      r.odometer_at = r.odometer_km != null ? (od ? od + "T00:00:00+07:00" : new Date().toISOString()) : null;
+      r.interval_km = pInt(c[6]);
+      r.interval_bulan = pInt(c[7]);
+      r.svc_last_date = pDate(c[8]);
+      r.svc_last_km = pInt(c[9]);
+      r.stnk_exp = pDate(c[10]);
+      r.kir_exp = pDate(c[11]);
+      const st = (c[12] || "normal").trim().toLowerCase() || "normal";
+      if (!["normal", "service"].includes(st)) throw new Error("status manual harus normal atau service");
+      r.status_manual = st;
+      const cur = (vsCache || []).find(v => v.plate === plate);
+      if (cur && cur.odometer_km != null && r.odometer_km != null && r.odometer_km < cur.odometer_km)
+        throw new Error(`odometer lebih kecil dari sistem (${nfmt(cur.odometer_km)} km)`);
+      r.isNew = !vehicles.some(v => v.plate === plate);
+    } catch (e) { r.err.push(e.message); }
+    out.push(r);
+  });
+  return out;
+}
+async function saveUpload(rows) {
+  let ok = 0; const fail = [];
+  for (const r of rows) {
+    const f = { name: r.name, merek_tipe: r.merek_tipe, speed_limit_kmh: r.speed_limit_kmh, odometer_km: r.odometer_km,
+      odometer_at: r.odometer_at, interval_km: r.interval_km, interval_bulan: r.interval_bulan, svc_last_date: r.svc_last_date,
+      svc_last_km: r.svc_last_km, stnk_exp: r.stnk_exp, kir_exp: r.kir_exp, status_manual: r.status_manual };
+    Object.keys(f).forEach(k => { if (f[k] == null) delete f[k]; });
+    let res;
+    if (r.isNew) res = await sb.from("vehicles").insert({ plate: r.plate, active: true, fleet_id: S.fleet_id, ...f }).select("id");
+    else { const cur = vehicles.find(v => v.plate === r.plate); res = await sb.from("vehicles").update(f).eq("id", cur.id).select("id"); }
+    if (res.error) fail.push(`${r.plate}: ${res.error.message}`);
+    else if (!res.data?.length) fail.push(`${r.plate}: ditolak (cek hak akses)`);
+    else ok++;
+  }
+  return { ok, fail };
+}
+function paintEnd() {
+  const box = $("#dv"), d = sel && drivers.get(sel);
+  if (!box || !d || !isAdmin) return;
+  box.querySelectorAll(".endbox").forEach(e => e.remove());
+  if (stateOf(d) === "off") return;
+  const id = d.id;
+  box.insertAdjacentHTML("beforeend", `<div class="endbox" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
+    <div class="hint" style="margin-bottom:6px">Akhiri tugas jika sopir lupa menekan Selesai.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="end-why" style="flex:1;min-width:160px;padding:8px;border-radius:10px;border:1px solid var(--line)">
+      <option value="">Pilih alasan…</option><option>Lupa selesai</option><option>HP mati</option><option>Kembali ke DC</option></select>
+      <button class="btn sm pri" id="end-go">Akhiri tugas</button></div>
+    <div class="err" id="end-msg"></div></div>`);
+  $("#end-go").onclick = async () => {
+    const why = $("#end-why").value;
+    if (!why) return ($("#end-msg").textContent = "Pilih alasan dulu.");
+    const { data } = await sb.from("shifts").select("id").eq("driver_id", id).is("ended_at", null).order("started_at", { ascending: false }).limit(1);
+    if (!data?.length) return ($("#end-msg").textContent = "Tidak ada sesi tugas aktif.");
+    const { error } = await sb.rpc("end_shift_admin", { p_shift: data[0].id, p_reason: why });
+    if (error) return ($("#end-msg").textContent = error.message);
+    toast("Tugas diakhiri admin.", ""); await load(); await getVehicleStatus(true);
+  };
+}
  // ---------- data & realtime ----------
 async function load() {
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
@@ -1513,6 +1689,7 @@ async function enter() {
     else if (n === "alerts") { closeSheet(); closeRecap(); tab = "alerts"; showTabs(); }
     else if (n === "recap") { closeRapor(); openRecap(); }
     else if (n === "rapor") { closeRecap(); openRapor(); }
+    else if (n === "fleetlist") { closeRecap(); closeRapor(); setNav(n); openFleet(); }
     else if (isAdmin) { closeRecap(); setNav(n); openSettings(n); }
   };
   $("#side-add").onclick = addDriver;
