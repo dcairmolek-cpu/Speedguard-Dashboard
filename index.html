@@ -350,7 +350,6 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
     <div class="fleetsel"><span class="fl">AR</span><div><small>Armada</small><b id="fleet">Armada</b></div></div>
     <nav class="nav" id="nav">
       <button data-n="dash" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</button>
-      <button data-n="alerts"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Peringatan<em id="nbadge"></em></button>
       <button data-n="recap"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Rekap</button>
       <button data-n="rapor"><svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 13l2.5 2.5L16 10"/></svg>Rapor sopir</button>
       <button data-n="fleetlist"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Kendaraan</button>
@@ -360,7 +359,6 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
     </nav>
     <div class="redcard"><h4>Hari ini <span id="t-date"></span></h4>
       <div class="r"><span>Overspeed</span><b id="t-over">0</b></div><div class="r"><span>Koneksi terputus</span><b id="t-off">0</b></div><div class="r"><span>Sopir bertugas</span><b id="t-on">0</b></div></div>
-    <button class="addcard adm" id="side-add"><i>+</i>Tambah sopir</button>
     <div class="foot"><button class="btn" id="b-out">Keluar</button></div>
   </aside>
 
@@ -606,7 +604,7 @@ $("#k-veh").textContent = vehicles.filter(v => v.active && inUse.has(v.plate)).l
 function renderAlerts() {
   const ev = events.filter(e => ALERT_TYPES.includes(e.type));
   const recent = ev.filter(e => Date.now() - new Date(e.occurred_at) < 864e5);
-  ["#abadge", "#nbadge", "#bbadge"].forEach(s => { $(s).textContent = recent.filter(e => !dismissedSet().has(Number(e.id))).length || ""; });
+  ["#abadge", "#bbadge"].forEach(s => { $(s).textContent = recent.filter(e => !dismissedSet().has(Number(e.id))).length || ""; });
   $("#alist").innerHTML = ev.length ? ev.slice(0, 80).map(e => {
     const i = evInfo(e);
     return `<li class="ev ${e.type}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
@@ -893,7 +891,7 @@ function info(title, html) {
 }
 
 // ---------- pengaturan ----------
-const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["drivers", "Sopir"], ["staff", "Pengguna"], ["audit", "Riwayat perubahan"]];
+const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["staff", "Pengguna"]];
 let stab = "rules";
 function openSettings(t) { if (!isAdmin) return; stab = t || stab; $("#sheet .sh-h h2").textContent = "Pengaturan"; $("#snav").style.display = ""; $("#sbody").style.gridColumn = ""; $("#sheet").hidden = false; renderSheet(); }
 function closeSheet() { $("#sheet").hidden = true; setNav(tab === "alerts" ? "alerts" : "dash"); }
@@ -1669,6 +1667,12 @@ async function saveVehicleForm(x, cur) {
   await load(); await getVehicleStatus(true); drawFleetParts();
   return null;
 }
+ // ---------- pop-up umum (Sopir, Riwayat) ----------
+function openPopup(title, render) {
+  $("#sheet").hidden = false; $("#sheet .sh-h h2").textContent = title;
+  $("#snav").style.display = "none"; $("#sbody").style.gridColumn = "1 / -1";
+  render();
+}
  // ---------- data & realtime ----------
 async function load() {
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
@@ -1738,9 +1742,9 @@ async function enter() {
     else if (n === "recap") { closeRapor(); openRecap(); }
     else if (n === "rapor") { closeRecap(); openRapor(); }
     else if (n === "fleetlist") { closeRecap(); closeRapor(); setNav(n); openFleet(); }
+    else if (n === "drivers" || n === "audit") { closeRecap(); closeRapor(); setNav(n); openPopup(n === "drivers" ? "Sopir" : "Riwayat perubahan", n === "drivers" ? tabDrivers : tabAudit); }
     else if (isAdmin) { closeRecap(); setNav(n); openSettings(n); }
   };
-  $("#side-add").onclick = addDriver;
   $("#q").oninput = e => { q = e.target.value; tab = "fleet"; showTabs(); render(); };
   $("#pick").onchange = e => e.target.value ? openDetail(e.target.value) : closeDetail();
   $("#chips").onclick = e => { const f = e.target.closest("[data-f]"); if (f) { filter = f.dataset.f; render(); } };
