@@ -1446,7 +1446,7 @@ function drawDC() {
     dcMarker.setLatLng([S.dc_lat, S.dc_lng]);
   }
 }
- // ---------- status armada (monitoring kendaraan) ----------
+// ---------- status armada (monitoring kendaraan) ----------
 const STAT = {
   service: ["Sedang service", "#2563eb"], bertugas: ["Sedang bertugas", "#2f9e6a"],
   dokumen_habis: ["STNK/KIR habis", "#d11f2e"], perlu_service: ["Perlu service", "#e29a1b"],
@@ -1462,7 +1462,7 @@ async function getVehicleStatus(force) {
 const nfmt = n => Number(n).toLocaleString("id-ID");
 const sisaTxt = v => v == null ? "–" : v < 0 ? "lewat " + nfmt(-v) : nfmt(v);
 const docTxt = s => s == null ? "–" : s < 0 ? '<b style="color:var(--crim)">habis</b>' : s + " hari";
-function openFleet() { $("#sheet").hidden = false; $("#sheet .sh-h h2").textContent = "Status armada"; $("#snav").style.display = "none"; $("#sbody").style.gridColumn = "1 / -1";
+function openFleet() { $("#sheet").hidden = false; $("#sheet .sh-h h2").textContent = "Status armada"; $("#snav").style.display = "none"; $("#sbody").style.gridColumn = "1 / -1"; renderFleet(false); }
 async function renderFleet(force) { await getVehicleStatus(force); drawFleet(); }
 function drawFleet() {
   const box = $("#sbody");
