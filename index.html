@@ -1424,7 +1424,7 @@ async function paintDC() {
   const straight = km({ lat: d.lat, lng: d.lng }, { lat: S.dc_lat, lng: S.dc_lng });
   const road = straight * (S.road_factor || 1.3);
   const spd = await getAvgSpeed();
-  if (sel !== d.id) return;
+  if (sel !== d.id) return;                      // sopir sudah diganti saat menunggu
   const eta = spd > 0 ? Math.round(road / spd * 60) : null;
   const moving = d.speed_kmh >= 3;
   box.querySelectorAll(".dcbox").forEach(e => e.remove());
@@ -1433,7 +1433,8 @@ async function paintDC() {
     <div><dt>Perkiraan tiba</dt><dd>${eta == null ? "–" : "± " + eta + " mnt"}</dd></div></dl>
     <p class="hint" style="font-size:12px">${moving ? "" : "Sopir sedang berhenti. "}Dihitung dengan rata-rata armada ${f1(spd)} km/jam, faktor jalan ${String(S.road_factor ?? 1.3).replace(".", ",")}. Perkiraan, bukan jaminan.</p></div>`);
 }
- // ---------- titik DC di peta ----------
+
+// ---------- titik DC di peta ----------
 let dcMarker = null;
 function drawDC() {
   if (!map) return;
@@ -1445,7 +1446,7 @@ function drawDC() {
   } else {
     dcMarker.setLatLng([S.dc_lat, S.dc_lng]);
   }
-}
+}                          
 // ---------- status armada (monitoring kendaraan) ----------
 const STAT = {
   service: ["Sedang service", "#2563eb"], bertugas: ["Sedang bertugas", "#2f9e6a"],
