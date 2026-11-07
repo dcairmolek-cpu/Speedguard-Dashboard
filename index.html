@@ -353,9 +353,8 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
       <button data-n="alerts"><svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Peringatan<em id="nbadge"></em></button>
       <button data-n="recap"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Rekap</button>
       <button data-n="rapor"><svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 13l2.5 2.5L16 10"/></svg>Rapor sopir</button>
-      <button data-n="fleetlist"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Status armada</button>
+      <button data-n="fleetlist"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Kendaraan</button>
       <button data-n="drivers" class="adm"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.7 0 4.5 1.8 4.5 4.5"/></svg>Sopir</button>
-      <button data-n="vehicles" class="adm"><svg viewBox="0 0 24 24"><path d="M2 6h11v10H2z"/><path d="M13 9h4l3 3v4h-7"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/></svg>Kendaraan</button>
       <button data-n="audit" class="adm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Riwayat</button>
       <button data-n="rules" class="adm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Pengaturan</button>
     </nav>
@@ -894,7 +893,7 @@ function info(title, html) {
 }
 
 // ---------- pengaturan ----------
-const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["drivers", "Sopir"], ["vehicles", "Kendaraan"], ["staff", "Pengguna"], ["audit", "Riwayat perubahan"]];
+const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["drivers", "Sopir"], ["staff", "Pengguna"], ["audit", "Riwayat perubahan"]];
 let stab = "rules";
 function openSettings(t) { if (!isAdmin) return; stab = t || stab; $("#sheet .sh-h h2").textContent = "Pengaturan"; $("#snav").style.display = ""; $("#sbody").style.gridColumn = ""; $("#sheet").hidden = false; renderSheet(); }
 function closeSheet() { $("#sheet").hidden = true; setNav(tab === "alerts" ? "alerts" : "dash"); }
@@ -1463,7 +1462,7 @@ async function getVehicleStatus(force) {
 const nfmt = n => Number(n).toLocaleString("id-ID");
 const sisaTxt = v => v == null ? "–" : v < 0 ? "lewat " + nfmt(-v) : nfmt(v);
 const docTxt = s => s == null ? "–" : s < 0 ? '<b style="color:var(--crim)">habis</b>' : s + " hari";
-function openFleet() { $("#sheet").hidden = false; $("#sheet .sh-h h2").textContent = "Status armada"; $("#snav").style.display = "none"; $("#sbody").style.gridColumn = "1 / -1"; renderFleet(false); }
+function openFleet() { $("#sheet").hidden = false; $("#sheet .sh-h h2").textContent = "Kendaraan"; $("#snav").style.display = "none"; $("#sbody").style.gridColumn = "1 / -1"; renderFleet(false); }
 async function renderFleet(force) { await getVehicleStatus(force); drawFleet(); }
 function drawFleet() {
   const box = $("#sbody");
@@ -1471,15 +1470,20 @@ function drawFleet() {
     box.innerHTML = `<div class="bar-top" style="flex-wrap:wrap;gap:8px">
         <input id="fv-q" type="search" placeholder="Cari plat, merek, atau sopir" style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:999px;background:var(--w)">
         <button class="btn sm" id="fv-refresh">Muat ulang</button>
+        ${isAdmin ? '<button class="btn sm pri" id="fv-add">+ Tambah kendaraan</button>' : ""}
         ${isAdmin ? '<button class="btn sm" id="fv-up-toggle">Unggah data</button>' : ""}</div>
       <div id="fv-chips" style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap"></div>
       <div id="fv-up"></div><div id="fv-body"></div>`;
     $("#fv-q").oninput = e => { vsQuery = e.target.value; drawFleetParts(); };
     $("#fv-refresh").onclick = async () => { await getVehicleStatus(true); drawFleetParts(); };
+    const add = $("#fv-add"); if (add) add.onclick = () => openVehicleForm(null);
     const up = $("#fv-up-toggle"); if (up) up.onclick = () => { upOpen = !upOpen; drawFleetParts(); };
     $("#fv-chips").onclick = e => { const b = e.target.closest("[data-k]"); if (b) { vsFilter = b.dataset.k; drawFleetParts(); } };
     $("#fv-body").onclick = async e => {
-      const b = e.target.closest("[data-svc]"); if (!b || !isAdmin) return;
+      if (!isAdmin) return;
+      const ed = e.target.closest("[data-edit]");
+      if (ed) { const v = vehicles.find(x => x.id === ed.dataset.edit); if (v) openVehicleForm(v); return; }
+      const b = e.target.closest("[data-svc]"); if (!b) return;
       const { error } = await sb.from("vehicles").update({ status_manual: b.dataset.on === "1" ? "service" : "normal" }).eq("id", b.dataset.svc);
       if (error) return toast(error.message, "bad");
       await getVehicleStatus(true); drawFleetParts();
@@ -1516,7 +1520,7 @@ function drawFleetParts() {
       <td><span style="background:${s[1]};color:#fff;font-weight:700;font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap">${esc(s[0])}</span></td>
       <td>${esc(v.sopir_aktif || "–")}</td><td>${sisaTxt(v.sisa_km)}</td><td>${sisaTxt(v.sisa_hari)}</td>
       <td>${docTxt(v.stnk_sisa)}</td><td>${docTxt(v.kir_sisa)}</td>
-      ${isAdmin ? `<td class="act"><button class="btn sm" data-svc="${v.id}" data-on="${v.status_manual === "service" ? "0" : "1"}">${v.status_manual === "service" ? "Selesai service" : "Tandai service"}</button></td>` : ""}</tr>`; }).join("") ||
+      ${isAdmin ? `<td class="act" style="white-space:nowrap"><button class="btn sm" data-edit="${v.id}">Ubah</button> <button class="btn sm" data-svc="${v.id}" data-on="${v.status_manual === "service" ? "0" : "1"}">${v.status_manual === "service" ? "Selesai service" : "Tandai service"}</button></td>` : ""}</tr>`; }).join("") ||
       `<tr><td colspan="9" class="muted">Tidak ada kendaraan yang cocok.</td></tr>`}</tbody></table></div>`;
   $("#fv-up").innerHTML = isAdmin && upOpen ? uploadPanel() : "";
 }
@@ -1621,6 +1625,49 @@ function paintEnd() {
     if (error) return ($("#end-msg").textContent = error.message);
     toast("Tugas diakhiri admin.", ""); await load(); await getVehicleStatus(true);
   };
+}
+
+
+// ---------- formulir kendaraan (tambah dan ubah) ----------
+const VF = v => [
+  { k: "plate", label: "Plat nomor", value: v?.plate, placeholder: "BM 1234 GA", required: true },
+  { k: "name", label: "Nama / keterangan (opsional)", value: v?.name },
+  { k: "merek", label: "Merek / tipe", value: v?.merek_tipe, placeholder: "Hino Dutro" },
+  { k: "limit", label: "Batas kecepatan khusus (km/jam)", type: "number", value: v?.speed_limit_kmh ?? "" },
+  { k: "odo", label: "Odometer terakhir (km)", type: "number", value: v?.odometer_km ?? "", hint: "Kosongkan untuk menghapus angka. Angka tidak boleh lebih kecil dari sebelumnya." },
+  { k: "int_km", label: "Interval service (km)", type: "number", value: v?.interval_km ?? "" },
+  { k: "int_bln", label: "Interval service (bulan)", type: "number", value: v?.interval_bulan ?? "" },
+  { k: "svc_tgl", label: "Service terakhir (tanggal)", value: v?.svc_last_date ?? "", placeholder: "dd/mm/yyyy" },
+  { k: "svc_km", label: "Odometer service terakhir (km)", type: "number", value: v?.svc_last_km ?? "" },
+  { k: "stnk", label: "Masa berlaku STNK", value: v?.stnk_exp ?? "", placeholder: "dd/mm/yyyy" },
+  { k: "kir", label: "Masa berlaku KIR", value: v?.kir_exp ?? "", placeholder: "dd/mm/yyyy" },
+  ...(v ? [{ k: "active", label: "Status", type: "select", value: v.active, options: [["true", "Aktif"], ["false", "Nonaktif"]] }] : [])
+];
+function openVehicleForm(v) {
+  ask({ title: v ? "Ubah kendaraan" : "Tambah kendaraan", fields: VF(v), submit: "Simpan", onSubmit: x => saveVehicleForm(x, v) });
+}
+async function saveVehicleForm(x, cur) {
+  let f;
+  try {
+    f = {
+      plate: x.plate.trim().replace(/\s+/g, " ").toUpperCase(),
+      name: x.name.trim() || null, merek_tipe: x.merek.trim() || null,
+      speed_limit_kmh: pInt(x.limit), odometer_km: pInt(x.odo),
+      interval_km: pInt(x.int_km), interval_bulan: pInt(x.int_bln),
+      svc_last_date: pDate(x.svc_tgl), svc_last_km: pInt(x.svc_km),
+      stnk_exp: pDate(x.stnk), kir_exp: pDate(x.kir)
+    };
+  } catch (e) { return e.message; }
+  if (cur) {
+    f.active = x.active === "true";
+    if (f.odometer_km !== (cur.odometer_km ?? null)) f.odometer_at = f.odometer_km != null ? new Date().toISOString() : null;
+  } else if (f.odometer_km != null) f.odometer_at = new Date().toISOString();
+  const res = cur
+    ? await sb.from("vehicles").update(f).eq("id", cur.id)
+    : await sb.from("vehicles").insert({ ...f, fleet_id: S.fleet_id, active: true });
+  if (res.error) return res.error.code === "23505" ? "Plat itu sudah terdaftar." : res.error.message;
+  await load(); await getVehicleStatus(true); drawFleetParts();
+  return null;
 }
  // ---------- data & realtime ----------
 async function load() {
