@@ -355,6 +355,7 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
       <button data-n="fleetlist"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Kendaraan</button>
       <button data-n="reports"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z M15 3v4h4 M9 12h6 M9 16h6"/></svg>Laporan</button>
       <button data-n="announce"><svg viewBox="0 0 24 24"><path d="M3 11v2h4l9 5V6L7 11z M18 9a3 3 0 0 1 0 6"/></svg>Pengumuman</button>
+      <button data-n="service"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-2.2z"/></svg>Service</button>
       <button data-n="drivers" class="adm"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.7 0 4.5 1.8 4.5 4.5"/></svg>Sopir</button>
       <button data-n="audit" class="adm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Riwayat</button>
       <button data-n="rules" class="adm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Pengaturan</button>
@@ -893,13 +894,13 @@ function info(title, html) {
 }
 
 // ---------- pengaturan ----------
-const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["autoend", "Akhiri tugas"], ["fitur", "Fitur sopir"], ["staff", "Pengguna"]];
+const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["autoend", "Akhiri tugas"], ["fitur", "Fitur sopir"], ["kode", "Kode masuk"], ["staff", "Pengguna"]];
 let stab = "rules";
 function openSettings(t) { if (!isAdmin) return; stab = t || stab; $("#sheet .sh-h h2").textContent = "Pengaturan"; $("#snav").style.display = ""; $("#sbody").style.gridColumn = ""; $("#sheet").hidden = false; renderSheet(); }
 function closeSheet() { $("#sheet").hidden = true; setNav(tab === "alerts" ? "alerts" : "dash"); }
 function renderSheet() {
   $("#snav").innerHTML = STABS.map(([k, t]) => `<button data-s="${k}" ${k === stab ? 'aria-current="true"' : ""}>${t}</button>`).join("");
-  ({ rules: tabRules, dc: tabDC, notify: tabNotify, drivers: tabDrivers, vehicles: tabVehicles, staff: tabStaff, audit: tabAudit, autoend: tabAutoEnd, fitur: tabFeatures, })[stab]();
+  ({ rules: tabRules, dc: tabDC, notify: tabNotify, drivers: tabDrivers, vehicles: tabVehicles, staff: tabStaff, audit: tabAudit, autoend: tabAutoEnd, fitur: tabFeatures, kode: tabLoginCode, })[stab]();
 }
 function setFleet(n) { fleetName = n; $("#fleet").textContent = n; $("#sub").textContent = n; document.title = "SpeedGuard · " + n; }
 async function saveSettings(v) {
@@ -1860,6 +1861,110 @@ async function tabFeatures() {
     if (!err) toast("Pengaturan fitur tersimpan.", "");
   };
 }
+ // ---------- service: bengkel, order, dan peringatan ----------
+const SV_ST = { menunggu: "Menunggu dimulai", menuju: "Menuju bengkel", di_bengkel: "Di bengkel", ditinggal: "Ditinggal di bengkel" };
+function svPeople() {
+  return [...drivers.entries()].map(([id, d]) => ({ id, name: d.full_name || "Sopir" })).sort((a, b) => a.name.localeCompare(b.name));
+}
+async function tabService() {
+  const box = $("#sbody");
+  box.innerHTML = '<p class="hint" style="padding:20px">Memuat…</p>';
+  const [ws, ord, al] = await Promise.all([
+    sb.from("workshops").select("*").order("name"),
+    sb.from("service_orders").select("*").in("status", ["menunggu", "menuju", "di_bengkel", "ditinggal"]).order("created_at", { ascending: false }),
+    sb.from("service_alerts").select("*")
+  ]);
+  const workshops = ws.data || [], orders = ord.data || [], alerts = al.data || [];
+  const people = svPeople();
+  const plates = vehicles.map(v => v.plate);
+  const err = ws.error || ord.error;
+  const inp = "width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)";
+  box.innerHTML = `
+    ${err ? `<p class="err">Gagal memuat: ${esc(err.message)}</p>` : ""}
+    ${alerts.length ? `<div class="card" style="padding:12px 14px;margin-bottom:12px;border-left:4px solid var(--crim)"><b>Perlu perhatian</b>
+      ${alerts.map(a => `<div style="margin-top:6px">${esc(a.plate)}: ${esc(a.alert || "")}</div>`).join("")}</div>` : ""}
+    <div class="card" style="padding:14px;margin-bottom:12px"><b>Buat order service</b>
+      <div style="margin-top:10px"><label class="hint">Kendaraan</label><select id="so-plate" style="${inp}">${plates.map(p => `<option>${esc(p)}</option>`).join("")}</select></div>
+      <div style="margin-top:10px"><label class="hint">Sopir</label><select id="so-driver" style="${inp}">${people.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select></div>
+      <div style="margin-top:10px"><label class="hint">Bengkel</label><select id="so-ws" style="${inp}">${workshops.map(w => `<option value="${w.id}">${esc(w.name)}</option>`).join("")}</select></div>
+      <div style="margin-top:10px"><label class="hint">Jenis</label><select id="so-jenis" style="${inp}"><option value="rutin">Rutin (pulang bareng kendaraan)</option><option value="tinggal">Ditinggal di bengkel</option></select></div>
+      <div style="margin-top:10px"><label class="hint">Rencana kembali (untuk ditinggal)</label><input type="date" id="so-back" style="${inp}"></div>
+      <div style="margin-top:10px"><label class="hint">Catatan</label><input id="so-notes" style="${inp}"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap"><span class="err" id="so-msg"></span><button class="btn pri" id="so-save">Buat order</button></div>
+    </div>
+    <div class="card" style="padding:14px;margin-bottom:12px"><b>Order aktif</b>
+      ${orders.length ? orders.map(o => `<div style="border-top:1px solid var(--line);padding:10px 0">
+        <div><b>${esc(o.plate)}</b> · ${o.jenis === "tinggal" ? "Ditinggal" : "Rutin"} · ${esc(SV_ST[o.status] || o.status)}</div>
+        <div class="hint">${esc((people.find(p => p.id === o.driver_id) || {}).name || "Sopir")}${o.planned_return ? " · kembali " + esc(o.planned_return) : ""}</div>
+        ${o.status === "ditinggal" ? `<button class="btn sm" data-pick="${o.id}" style="margin-top:6px">Kendaraan diambil</button>` : ""}
+      </div>`).join("") : '<p class="hint">Tidak ada order aktif.</p>'}
+    </div>
+    <div class="card" style="padding:14px"><b>Bengkel langganan</b>
+      ${workshops.map(w => `<div style="border-top:1px solid var(--line);padding:8px 0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <span>${esc(w.name)} <span class="hint">radius ${w.radius_m} m${w.active ? "" : " · nonaktif"}</span></span>
+        ${w.active ? `<button class="btn sm" data-wsoff="${w.id}">Nonaktifkan</button>` : ""}</div>`).join("") || '<p class="hint">Belum ada bengkel.</p>'}
+      <div style="margin-top:12px;display:grid;gap:8px">
+        <input id="ws-name" placeholder="Nama bengkel" style="${inp}">
+        <div style="display:flex;gap:8px"><input id="ws-lat" type="number" step="0.00001" placeholder="Latitude" style="${inp}"><input id="ws-lng" type="number" step="0.00001" placeholder="Longitude" style="${inp}"></div>
+        <input id="ws-rad" type="number" value="300" placeholder="Radius (meter)" style="${inp}">
+        <div><button class="btn sm pri" id="ws-add">Tambah bengkel</button> <span class="err" id="ws-msg"></span></div>
+      </div>
+    </div>`;
+
+  $("#so-save").onclick = async () => {
+    const back = $("#so-back").value || null;
+    if ($("#so-jenis").value === "tinggal" && !back) return ($("#so-msg").textContent = "Isi rencana kembali untuk kendaraan yang ditinggal.");
+    $("#so-save").disabled = true;
+    const { error: e } = await sb.rpc("admin_create_order", {
+      p_plate: $("#so-plate").value, p_driver: $("#so-driver").value, p_workshop: $("#so-ws").value,
+      p_jenis: $("#so-jenis").value, p_planned_return: back, p_notes: $("#so-notes").value.trim() });
+    $("#so-save").disabled = false;
+    if (e) return ($("#so-msg").textContent = e.message);
+    toast("Order service dibuat.", "");
+    tabService();
+  };
+  box.querySelectorAll("[data-pick]").forEach(b => b.onclick = async () => {
+    const { error: e } = await sb.rpc("admin_order_pickup", { p_id: b.dataset.pick });
+    if (e) return toast(e.message, "bad");
+    toast("Kendaraan ditandai sudah diambil.", "");
+    tabService();
+  });
+  box.querySelectorAll("[data-wsoff]").forEach(b => b.onclick = async () => {
+    const { error: e } = await sb.from("workshops").update({ active: false }).eq("id", b.dataset.wsoff);
+    if (e) return toast(e.message, "bad");
+    tabService();
+  });
+  $("#ws-add").onclick = async () => {
+    const name = $("#ws-name").value.trim(), lat = Number($("#ws-lat").value), lng = Number($("#ws-lng").value), rad = Number($("#ws-rad").value) || 300;
+    if (name.length < 3) return ($("#ws-msg").textContent = "Nama bengkel minimal 3 huruf.");
+    if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)) return ($("#ws-msg").textContent = "Koordinat tidak valid.");
+    const { error: e } = await sb.from("workshops").insert({ fleet_id: S.fleet_id, name, lat, lng, radius_m: rad });
+    if (e) return ($("#ws-msg").textContent = e.message);
+    toast("Bengkel ditambahkan.", "");
+    tabService();
+  };
+}
+
+// ---------- kode masuk sementara untuk sopir ----------
+async function tabLoginCode() {
+  const box = $("#sbody");
+  const people = svPeople();
+  box.innerHTML = `
+    <p class="lead">Kode masuk sementara untuk sopir yang lupa kata sandi. Kode 6 angka ini berlaku 10 menit dan hanya bisa dipakai sekali. Sopir memasukkannya di kolom kata sandi.</p>
+    <div class="card" style="padding:14px">
+      <label class="hint">Sopir</label>
+      <select id="lc-driver" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)">
+        ${people.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>
+      <div style="margin-top:12px"><button class="btn pri" id="lc-make">Buat kode</button></div>
+      <div id="lc-out" style="margin-top:14px"></div>
+    </div>`;
+  $("#lc-make").onclick = async () => {
+    const { data, error: e } = await sb.rpc("admin_create_code", { p_driver: $("#lc-driver").value });
+    if (e) return ($("#lc-out").innerHTML = `<span class="err">${esc(e.message)}</span>`);
+    $("#lc-out").innerHTML = `<div style="font-size:34px;font-weight:800;letter-spacing:8px">${esc(String(data))}</div>
+      <div class="hint">Berlaku 10 menit. Berikan kode ini langsung kepada sopir.</div>`;
+  };
+}
  // ---------- data & realtime ----------
 async function load() {
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
@@ -1931,6 +2036,7 @@ async function enter() {
     else if (n === "fleetlist") { closeRecap(); closeRapor(); setNav(n); openFleet(); }
     else if (n === "reports") { closeRecap(); closeRapor(); setNav(n); openPopup("Laporan", tabReports); }
     else if (n === "announce") { closeRecap(); closeRapor(); setNav(n); openPopup("Pengumuman", tabAnnounce); }
+    else if (n === "service") { closeRecap(); closeRapor(); setNav(n); openPopup("Service", tabService); }
     else if (n === "drivers" || n === "audit") { closeRecap(); closeRapor(); setNav(n); openPopup(n === "drivers" ? "Sopir" : "Riwayat perubahan", n === "drivers" ? tabDrivers : tabAudit); }
     else if (isAdmin) { closeRecap(); setNav(n); openSettings(n); }
   };
