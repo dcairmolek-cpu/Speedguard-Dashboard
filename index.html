@@ -353,6 +353,7 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
       <button data-n="recap"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Rekap</button>
       <button data-n="rapor"><svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 13l2.5 2.5L16 10"/></svg>Rapor sopir</button>
       <button data-n="fleetlist"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Kendaraan</button>
+      <button data-n="reports"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z M15 3v4h4 M9 12h6 M9 16h6"/></svg>Laporan</button>
       <button data-n="drivers" class="adm"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.7 0 4.5 1.8 4.5 4.5"/></svg>Sopir</button>
       <button data-n="audit" class="adm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Riwayat</button>
       <button data-n="rules" class="adm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Pengaturan</button>
@@ -1691,6 +1692,96 @@ function tabAutoEnd() {
     if (!err) toast("Pengaturan tersimpan.");
   };
 }
+ // ---------- laporan kejadian dan cek kendaraan ----------
+const RPT_KIND = { kerusakan: "Kerusakan ringan", hampir_celaka: "Hampir celaka", kecelakaan: "Kecelakaan", lainnya: "Lainnya" };
+const RPT_ITEM = { lampu: "Lampu", ban: "Ban dan tekanan", oli: "Oli mesin", air: "Air radiator", bodi: "Kondisi bodi", rem: "Rem" };
+let rptTab = "kejadian", rptFilter = "semua", rptData = null;
+
+async function signUrls(paths) {
+  const out = [];
+  for (const p of paths || []) {
+    const { data } = await sb.storage.from("incidents").createSignedUrl(p, 3600);
+    if (data && data.signedUrl) out.push(data.signedUrl);
+  }
+  return out;
+}
+async function loadReports() {
+  const [ir, vc, pr] = await Promise.all([
+    sb.from("incident_reports").select("*").order("created_at", { ascending: false }).limit(200),
+    sb.from("vehicle_checks").select("*").order("checked_at", { ascending: false }).limit(200),
+    sb.from("profiles").select("id,full_name")
+  ]);
+  const names = {};
+  (pr.data || []).forEach(p => (names[p.id] = p.full_name));
+  rptData = { ir: ir.data || [], vc: vc.data || [], names, err: ((ir.error || vc.error || {}).message) || "" };
+  for (const r of rptData.ir) r.photos = await signUrls(r.photo_paths);
+  for (const r of rptData.vc) r.photos = await signUrls(r.photo_paths);
+}
+function tabReports() {
+  $("#sbody").innerHTML = '<p class="hint" style="padding:20px">Memuat laporan…</p>';
+  loadReports().then(drawReports);
+}
+function drawReports() {
+  const box = $("#sbody");
+  if (!rptData) return;
+  if (rptData.err) { box.innerHTML = `<p class="err" style="padding:20px">Gagal memuat: ${esc(rptData.err)}</p>`; return; }
+  const isI = rptTab === "kejadian";
+  const newCount = rptData.ir.filter(r => r.status === "baru").length;
+  const chips = isI
+    ? [["semua", "Semua", rptData.ir.length], ["baru", "Baru", newCount], ["ditangani", "Sudah ditangani", rptData.ir.length - newCount]]
+    : [["semua", "Semua", rptData.vc.length], ["bermasalah", "Ada bermasalah", rptData.vc.filter(v => !v.all_ok).length], ["baik", "Semua baik", rptData.vc.filter(v => v.all_ok).length]];
+  const list = isI
+    ? rptData.ir.filter(r => rptFilter === "semua" || r.status === rptFilter).map(incCard).join("")
+    : rptData.vc.filter(v => rptFilter === "semua" || (rptFilter === "bermasalah" ? !v.all_ok : v.all_ok)).map(chkCard).join("");
+  box.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn sm${isI ? " pri" : ""}" data-rtab="kejadian">Kejadian</button>
+      <button class="btn sm${!isI ? " pri" : ""}" data-rtab="cek">Cek kendaraan</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${chips.map(([k, l, n]) =>
+      `<button class="btn sm${rptFilter === k ? " pri" : ""}" data-rfil="${k}">${esc(l)} <b>${n}</b></button>`).join("")}</div>
+    ${list || '<p class="hint" style="padding:20px">Belum ada data.</p>'}`;
+  box.querySelectorAll("[data-rtab]").forEach(b => b.onclick = () => { rptTab = b.dataset.rtab; rptFilter = "semua"; drawReports(); });
+  box.querySelectorAll("[data-rfil]").forEach(b => b.onclick = () => { rptFilter = b.dataset.rfil; drawReports(); });
+  box.querySelectorAll("[data-done]").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const { error } = await sb.from("incident_reports").update({ status: "ditangani" }).eq("id", b.dataset.done);
+    if (error) { toast(error.message, "bad"); b.disabled = false; return; }
+    toast("Laporan ditandai sudah ditangani.", "");
+    await loadReports(); drawReports();
+  });
+}
+function photoRow(urls) {
+  return (urls || []).map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>`).join("");
+}
+function badge(done) {
+  return `<span style="background:${done ? "#1f7a4d" : "#d11f2e"};color:#fff;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700">${done ? "Ditangani" : "Baru"}</span>`;
+}
+function incCard(r) {
+  const who = rptData.names[r.driver_id] || "Sopir";
+  const when = new Date(r.created_at).toLocaleString("id-ID");
+  const map = r.lat != null ? `<a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" rel="noopener" style="color:var(--red);font-weight:700">Lihat lokasi</a>` : '<span class="hint">Lokasi tidak tersedia</span>';
+  const done = r.status === "ditangani";
+  const serius = r.kind === "kecelakaan" || r.kind === "hampir_celaka";
+  return `<div class="card" style="padding:14px;margin-bottom:10px;border-left:4px solid ${serius ? "var(--crim)" : "var(--red)"}">
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${esc(RPT_KIND[r.kind] || r.kind)}</b>${badge(done)}</div>
+    <div class="hint" style="margin:4px 0 8px">${esc(r.plate || "–")} · ${esc(who)} · ${esc(when)}</div>
+    <p style="margin-bottom:8px">${esc(r.description)}</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${photoRow(r.photos)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">${map}${isAdmin && !done ? `<button class="btn sm pri" data-done="${r.id}">Tandai ditangani</button>` : ""}</div></div>`;
+}
+function chkCard(v) {
+  const who = rptData.names[v.driver_id] || "Sopir";
+  const when = new Date(v.checked_at).toLocaleString("id-ID");
+  const items = v.items || {};
+  const bad = Object.keys(RPT_ITEM).filter(k => items[k] === false).map(k => RPT_ITEM[k]);
+  const status = bad.length ? `<span style="color:var(--crim);font-weight:700">Bermasalah: ${esc(bad.join(", "))}</span>` : `<span style="color:#1f7a4d;font-weight:700">Semua baik</span>`;
+  return `<div class="card" style="padding:14px;margin-bottom:10px;border-left:4px solid ${bad.length ? "var(--crim)" : "#1f7a4d"}">
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${esc(v.plate)}</b><span class="hint">${esc(when)}</span></div>
+    <div class="hint" style="margin:4px 0 8px">${esc(who)}</div>
+    <div style="margin-bottom:8px">${status}</div>
+    ${v.notes ? `<p style="margin-bottom:8px">${esc(v.notes)}</p>` : ""}
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${photoRow(v.photos)}</div></div>`;
+}
  // ---------- data & realtime ----------
 async function load() {
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
@@ -1760,6 +1851,7 @@ async function enter() {
     else if (n === "recap") { closeRapor(); openRecap(); }
     else if (n === "rapor") { closeRecap(); openRapor(); }
     else if (n === "fleetlist") { closeRecap(); closeRapor(); setNav(n); openFleet(); }
+    else if (n === "reports") { closeRecap(); closeRapor(); setNav(n); openPopup("Laporan", tabReports); }
     else if (n === "drivers" || n === "audit") { closeRecap(); closeRapor(); setNav(n); openPopup(n === "drivers" ? "Sopir" : "Riwayat perubahan", n === "drivers" ? tabDrivers : tabAudit); }
     else if (isAdmin) { closeRecap(); setNav(n); openSettings(n); }
   };
