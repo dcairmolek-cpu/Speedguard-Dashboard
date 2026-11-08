@@ -354,6 +354,7 @@ input:focus,select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 3
       <button data-n="rapor"><svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3z"/><path d="M8 13l2.5 2.5L16 10"/></svg>Rapor sopir</button>
       <button data-n="fleetlist"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Kendaraan</button>
       <button data-n="reports"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z M15 3v4h4 M9 12h6 M9 16h6"/></svg>Laporan</button>
+      <button data-n="announce"><svg viewBox="0 0 24 24"><path d="M3 11v2h4l9 5V6L7 11z M18 9a3 3 0 0 1 0 6"/></svg>Pengumuman</button>
       <button data-n="drivers" class="adm"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.7 0 4.5 1.8 4.5 4.5"/></svg>Sopir</button>
       <button data-n="audit" class="adm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Riwayat</button>
       <button data-n="rules" class="adm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>Pengaturan</button>
@@ -1782,6 +1783,51 @@ function chkCard(v) {
     ${v.notes ? `<p style="margin-bottom:8px">${esc(v.notes)}</p>` : ""}
     <div style="display:flex;gap:6px;flex-wrap:wrap">${photoRow(v.photos)}</div></div>`;
 }
+ // ---------- pengumuman admin ----------
+async function tabAnnounce() {
+  const box = $("#sbody");
+  box.innerHTML = '<p class="hint" style="padding:20px">Memuat…</p>';
+  const { data, error } = await sb.from("announcements").select("*").order("created_at", { ascending: false }).limit(20);
+  const list = (data || []).map(a => `<div class="card" style="padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${a.important ? "[PENTING] " : ""}${esc(a.title)}</b><span class="hint">${esc(new Date(a.created_at).toLocaleString("id-ID"))}</span></div>
+      <p style="margin-top:4px">${esc(a.body)}</p>
+      <div class="hint" style="margin-top:4px">${a.to_all ? "Dikirim ke semua sopir" : "Dikirim ke sopir tertentu"}</div></div>`).join("");
+  const people = [...drivers.entries()].map(([id, d]) => ({ id, name: d.full_name || "Sopir" })).sort((a, b) => a.name.localeCompare(b.name));
+  box.innerHTML = `
+    <div class="card" style="padding:16px;margin-bottom:12px">
+      <b>Kirim pengumuman</b>
+      <div style="margin-top:10px"><label class="hint">Judul</label>
+        <input id="an-title" maxlength="120" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)"></div>
+      <div style="margin-top:10px"><label class="hint">Isi pengumuman</label>
+        <textarea id="an-body" rows="4" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)"></textarea></div>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="an-imp"> Tandai penting</label>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="an-all" checked> Kirim ke semua sopir</label>
+      <div id="an-pick" style="display:none;margin-top:8px;max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:8px">
+        ${people.map(p => `<label style="display:flex;gap:8px;align-items:center;padding:4px 0"><input type="checkbox" class="an-p" value="${p.id}"> ${esc(p.name)}</label>`).join("")}
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap">
+        <span class="err" id="an-msg"></span>
+        <button class="btn pri" id="an-send">Kirim pengumuman</button></div>
+    </div>
+    <div class="hd" style="margin:6px 0 8px"><b>Riwayat pengumuman</b></div>
+    ${error ? `<p class="err">Gagal memuat: ${esc(error.message)}</p>` : (list || '<p class="hint">Belum ada pengumuman.</p>')}`;
+  $("#an-all").onchange = () => { $("#an-pick").style.display = $("#an-all").checked ? "none" : "block"; };
+  $("#an-send").onclick = async () => {
+    const title = $("#an-title").value.trim(), body = $("#an-body").value.trim();
+    if (title.length < 3) return ($("#an-msg").textContent = "Judul minimal 3 huruf.");
+    if (body.length < 5) return ($("#an-msg").textContent = "Isi minimal 5 huruf.");
+    const all = $("#an-all").checked;
+    const ids = [...document.querySelectorAll(".an-p:checked")].map(c => c.value);
+    if (!all && !ids.length) return ($("#an-msg").textContent = "Pilih minimal satu sopir.");
+    $("#an-send").disabled = true; $("#an-msg").textContent = "";
+    const { error: e } = await sb.rpc("send_announcement", { p_title: title, p_body: body,
+      p_important: $("#an-imp").checked, p_drivers: all ? null : ids });
+    $("#an-send").disabled = false;
+    if (e) return ($("#an-msg").textContent = e.message);
+    toast("Pengumuman terkirim.", "");
+    tabAnnounce();
+  };
+}
  // ---------- data & realtime ----------
 async function load() {
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
@@ -1852,6 +1898,7 @@ async function enter() {
     else if (n === "rapor") { closeRecap(); openRapor(); }
     else if (n === "fleetlist") { closeRecap(); closeRapor(); setNav(n); openFleet(); }
     else if (n === "reports") { closeRecap(); closeRapor(); setNav(n); openPopup("Laporan", tabReports); }
+    else if (n === "announce") { closeRecap(); closeRapor(); setNav(n); openPopup("Pengumuman", tabAnnounce); }
     else if (n === "drivers" || n === "audit") { closeRecap(); closeRapor(); setNav(n); openPopup(n === "drivers" ? "Sopir" : "Riwayat perubahan", n === "drivers" ? tabDrivers : tabAudit); }
     else if (isAdmin) { closeRecap(); setNav(n); openSettings(n); }
   };
