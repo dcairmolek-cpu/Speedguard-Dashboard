@@ -894,13 +894,13 @@ function info(title, html) {
 }
 
 // ---------- pengaturan ----------
-const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["autoend", "Akhiri tugas"], ["fitur", "Fitur sopir"], ["kode", "Kode masuk"], ["sistem", "Status sistem"], ["koneksi", "Kejadian koneksi"], ["kendara", "Deteksi kendaraan"], ["bbm", "BBM"], ["staff", "Pengguna"]];
+const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["autoend", "Akhiri tugas"], ["fitur", "Fitur sopir"], ["kode", "Kode masuk"], ["sistem", "Status sistem"], ["koneksi", "Kejadian koneksi"], ["kendara", "Deteksi kendaraan"], ["bbm", "BBM"], ["wilayah", "Wilayah"], ["staff", "Pengguna"]];
 let stab = "rules";
 function openSettings(t) { if (!isAdmin) return; stab = t || stab; $("#sheet .sh-h h2").textContent = "Pengaturan"; $("#snav").style.display = ""; $("#sbody").style.gridColumn = ""; $("#sheet").hidden = false; renderSheet(); }
 function closeSheet() { $("#sheet").hidden = true; setNav(tab === "alerts" ? "alerts" : "dash"); }
 function renderSheet() {
   $("#snav").innerHTML = STABS.map(([k, t]) => `<button data-s="${k}" ${k === stab ? 'aria-current="true"' : ""}>${t}</button>`).join("");
-  ({ rules: tabRules, koneksi: tabKoneksi, kendara: tabKendara, bbm: tabBBM, dc: tabDC, notify: tabNotify, drivers: tabDrivers, vehicles: tabVehicles, staff: tabStaff, audit: tabAudit, autoend: tabAutoEnd, fitur: tabFeatures, kode: tabLoginCode, sistem: tabSystem, })[stab]();
+  ({ rules: tabRules, koneksi: tabKoneksi, kendara: tabKendara, bbm: tabBBM, wilayah: tabWilayah, dc: tabDC, notify: tabNotify, drivers: tabDrivers, vehicles: tabVehicles, staff: tabStaff, audit: tabAudit, autoend: tabAutoEnd, fitur: tabFeatures, kode: tabLoginCode, sistem: tabSystem, })[stab]();
 }
 function setFleet(n) { fleetName = n; $("#fleet").textContent = n; $("#sub").textContent = n; document.title = "SpeedGuard · " + n; }
 async function saveSettings(v) {
@@ -2088,6 +2088,124 @@ async function tabBBM() {
         <tr style="text-align:left"><th style="padding:6px">Plat</th><th style="padding:6px">Rata-rata</th><th style="padding:6px">Data</th></tr>${tbl}</table>`
         : '<p class="hint" style="margin-top:6px">Belum ada data pengisian.</p>'}
     </div>`;
+}
+ // ---------- wilayah batas kecepatan ----------
+let wlMap = null, wlCircle = null;
+async function tabWilayah() {
+  const box = $("#sbody");
+  box.innerHTML = '<p class="hint" style="padding:20px">Memuat…</p>';
+  const [st, wl] = await Promise.all([
+    sb.from("app_settings").select("wilayah_search").eq("fleet_id", S.fleet_id).single(),
+    sb.from("wilayah_batas").select("*").order("nama")
+  ]);
+  const searchOn = (st.data || {}).wilayah_search !== false;
+  const list = wl.data || [];
+  const inp = "width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)";
+  box.innerHTML = `
+    <p class="lead">Batas kecepatan per wilayah. Di dalam lingkaran wilayah, batasnya berlaku menggantikan batas default. Jika beberapa wilayah bertumpuk, yang dipakai adalah wilayah dengan radius terkecil.</p>
+    <div class="card" style="padding:14px;margin-bottom:12px">
+      <label style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span>Pencarian tempat (OpenStreetMap)<br><span class="hint">Mati = admin hanya bisa memasukkan koordinat manual.</span></span>
+        <input id="wl-search-on" type="checkbox" ${searchOn ? "checked" : ""} style="width:20px;height:20px"></label>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn sm" id="wl-search-save">Simpan saklar</button></div>
+    </div>
+    <div class="card" style="padding:14px;margin-bottom:12px"><b>Tambah wilayah</b>
+      <div style="margin-top:10px"><label class="hint">Nama wilayah</label><input id="wl-nama" style="${inp}" placeholder="Contoh: Area DC Air Molek"></div>
+      ${searchOn ? `<div style="margin-top:10px"><label class="hint">Cari tempat</label>
+        <div style="display:flex;gap:8px"><input id="wl-q" style="${inp}" placeholder="Contoh: Pasar Pranap"><button class="btn sm" id="wl-find">Cari</button></div>
+        <div id="wl-hits" style="margin-top:6px"></div></div>` : ""}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <div><label class="hint">Latitude</label><input id="wl-lat" type="number" step="0.00001" style="${inp}"></div>
+        <div><label class="hint">Longitude</label><input id="wl-lng" type="number" step="0.00001" style="${inp}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <div><label class="hint">Radius (meter)</label><input id="wl-rad" type="number" value="2000" min="50" max="20000" style="${inp}"></div>
+        <div><label class="hint">Batas (km/jam)</label><input id="wl-lim" type="number" value="40" min="10" max="130" style="${inp}"></div>
+      </div>
+      <div style="margin-top:10px"><label class="hint">Jenis wilayah (opsional)</label><input id="wl-jenis" style="${inp}" placeholder="Area DC, Jalan tol, Permukiman"></div>
+      <div style="margin-top:10px"><label class="hint">Kecamatan atau desa (opsional, untuk laporan)</label><input id="wl-adm" style="${inp}"></div>
+      <div id="wl-map" style="height:220px;margin-top:12px;border-radius:12px;border:1px solid var(--line)"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap">
+        <span class="err" id="wl-msg"></span><button class="btn pri" id="wl-save">Simpan wilayah</button></div>
+    </div>
+    <div class="card" style="padding:12px 14px"><b>Daftar wilayah</b>
+      ${list.map(w => `<div style="border-top:1px solid var(--line);padding:10px 0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <div><b>${esc(w.nama)}</b> <span class="hint">${w.aktif ? "" : "· nonaktif"}</span>
+          <div class="hint">radius ${w.radius_m} m · batas ${w.batas_kmh} km/jam${w.jenis ? " · " + esc(w.jenis) : ""}${w.sumber === "pencarian" ? " · dari pencarian" : ""}</div></div>
+        <button class="btn sm" data-wltoggle="${w.id}" data-on="${w.aktif ? 1 : 0}">${w.aktif ? "Nonaktifkan" : "Aktifkan"}</button></div>`).join("") || '<p class="hint">Belum ada wilayah.</p>'}
+    </div>`;
+
+  // peta pratinjau lingkaran (Leaflet, jika tersedia)
+  if (typeof L !== "undefined") {
+    if (wlMap) { wlMap.remove(); wlMap = null; }
+    wlMap = L.map("wl-map").setView([-0.5, 102], 9);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18 }).addTo(wlMap);
+    const redraw = () => {
+      const la = Number($("#wl-lat").value), ln = Number($("#wl-lng").value), r = Number($("#wl-rad").value) || 2000;
+      if (wlCircle) { wlCircle.remove(); wlCircle = null; }
+      if (Number.isFinite(la) && Number.isFinite(ln) && (la || ln)) {
+        wlCircle = L.circle([la, ln], { radius: r, color: "#378ADD", weight: 2 }).addTo(wlMap);
+        wlMap.fitBounds(wlCircle.getBounds(), { maxZoom: 14 });
+      }
+    };
+    wlMap.on("click", e => { $("#wl-lat").value = e.latlng.lat.toFixed(5); $("#wl-lng").value = e.latlng.lng.toFixed(5); redraw(); });
+    ["wl-lat", "wl-lng", "wl-rad"].forEach(id => $("#" + id).oninput = redraw);
+  }
+
+  $("#wl-search-save").onclick = async () => {
+    const err = await saveSettings({ wilayah_search: $("#wl-search-on").checked });
+    if (err) return toast(err, "bad");
+    toast("Pengaturan pencarian tersimpan.", "");
+    tabWilayah();
+  };
+
+  // pencarian tempat lewat OpenStreetMap, dibatasi ke Indonesia
+  if (searchOn) {
+    const find = async () => {
+      const q = $("#wl-q").value.trim();
+      if (q.length < 3) return ($("#wl-msg").textContent = "Ketik nama tempat minimal 3 huruf.");
+      $("#wl-msg").textContent = "";
+      const url = "https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=id&accept-language=id&q=" + encodeURIComponent(q);
+      try {
+        const res = await fetch(url, { headers: { Accept: "application/json" } });
+        const hits = await res.json();
+        $("#wl-hits").innerHTML = hits.length ? hits.map((h, i) => `<div data-hit="${i}" style="padding:6px 8px;border:1px solid var(--line);border-radius:10px;margin-top:4px;cursor:pointer;font-size:13px">${esc(h.display_name)}</div>`).join("")
+          : '<p class="hint">Tidak ditemukan. Coba nama lain, atau isi koordinat manual.</p>';
+        document.querySelectorAll("[data-hit]").forEach(el => el.onclick = () => {
+          const h = hits[Number(el.dataset.hit)];
+          $("#wl-lat").value = Number(h.lat).toFixed(5); $("#wl-lng").value = Number(h.lon).toFixed(5);
+          if (!$("#wl-nama").value.trim()) $("#wl-nama").value = (h.name || q);
+          if (typeof wlMap !== "undefined" && wlMap) { $("#wl-lat").dispatchEvent(new Event("input")); }
+        });
+      } catch (e) { $("#wl-msg").textContent = "Pencarian gagal. Isi koordinat manual."; }
+    };
+    $("#wl-find").onclick = find;
+    $("#wl-q").onkeydown = e => { if (e.key === "Enter") find(); };
+  }
+
+  $("#wl-save").onclick = async () => {
+    const nama = $("#wl-nama").value.trim(), lat = Number($("#wl-lat").value), lng = Number($("#wl-lng").value);
+    const rad = Number($("#wl-rad").value), lim = Number($("#wl-lim").value);
+    if (nama.length < 3) return ($("#wl-msg").textContent = "Nama wilayah minimal 3 huruf.");
+    if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) || (!lat && !lng)) return ($("#wl-msg").textContent = "Pilih titik pusat dari pencarian atau peta.");
+    if (!(rad >= 50 && rad <= 20000)) return ($("#wl-msg").textContent = "Radius harus 50 sampai 20.000 meter.");
+    if (!(lim >= 10 && lim <= 130)) return ($("#wl-msg").textContent = "Batas harus 10 sampai 130 km/jam.");
+    $("#wl-save").disabled = true;
+    const { error: e } = await sb.from("wilayah_batas").insert({
+      fleet_id: S.fleet_id, nama, lat, lng, radius_m: Math.round(rad), batas_kmh: Math.round(lim),
+      jenis: $("#wl-jenis").value.trim() || null, lokasi_adm: $("#wl-adm")?.value.trim() || null,
+      sumber: searchOn && $("#wl-hits").innerHTML ? "pencarian" : "manual" });
+    $("#wl-save").disabled = false;
+    if (e) return ($("#wl-msg").textContent = e.message);
+    toast("Wilayah disimpan. Berlaku untuk sopir setelah aplikasi memuat data.", "");
+    tabWilayah();
+  };
+
+  box.querySelectorAll("[data-wltoggle]").forEach(b => b.onclick = async () => {
+    const { error: e } = await sb.from("wilayah_batas").update({ aktif: b.dataset.on !== "1", updated_at: new Date().toISOString() }).eq("id", b.dataset.wltoggle);
+    if (e) return toast(e.message, "bad");
+    tabWilayah();
+  });
 }
  // ---------- data & realtime ----------
 async function load() {
