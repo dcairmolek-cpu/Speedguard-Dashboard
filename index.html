@@ -894,7 +894,7 @@ function info(title, html) {
 }
 
 // ---------- pengaturan ----------
-const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["autoend", "Akhiri tugas"], ["fitur", "Fitur sopir"], ["kode", "Kode masuk"], ["sistem", "Status sistem"], ["staff", "Pengguna"]];
+const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["autoend", "Akhiri tugas"], ["fitur", "Fitur sopir"], ["kode", "Kode masuk"], ["sistem", "Status sistem"], ["koneksi", "Kejadian koneksi"], ["staff", "Pengguna"]];
 let stab = "rules";
 function openSettings(t) { if (!isAdmin) return; stab = t || stab; $("#sheet .sh-h h2").textContent = "Pengaturan"; $("#snav").style.display = ""; $("#sbody").style.gridColumn = ""; $("#sheet").hidden = false; renderSheet(); }
 function closeSheet() { $("#sheet").hidden = true; setNav(tab === "alerts" ? "alerts" : "dash"); }
@@ -1992,6 +1992,27 @@ async function tabSystem() {
     <p class="hint" style="margin-top:8px">Indikator WhatsApp hanya menunjukkan pengaturan. Pengiriman sebenarnya dicek lewat log fungsi server.</p>
     <div style="margin-top:10px"><button class="btn sm" id="sys-re">Muat ulang</button></div>`;
   $("#sys-re").onclick = tabSystem;
+}
+ // ---------- kejadian koneksi ----------
+async function tabKoneksi() {
+  const box = $("#sbody");
+  box.innerHTML = '<p class="hint" style="padding:20px">Memuat…</p>';
+  const { data, error } = await sb.from("kejadian_koneksi").select("*").order("mulai", { ascending: false }).limit(100);
+  const LBL = { sinyal_hilang: "Sinyal hilang", mode_pesawat: "Mode pesawat", baterai_habis: "HP mati (baterai habis)", hp_mati_atau_aplikasi_berhenti: "HP mati atau aplikasi berhenti" };
+  const names = {};
+  [...drivers.entries()].forEach(([id, d]) => (names[id] = d.full_name || "Sopir"));
+  const fmt = t => new Date(t).toLocaleString("id-ID");
+  const rows = (data || []).map(k => {
+    const menit = Math.round((new Date(k.selesai) - new Date(k.mulai)) / 60000);
+    const cek = k.jenis === "hp_mati_atau_aplikasi_berhenti" ? ' <span style="color:var(--crim)">· perlu dicek</span>' : "";
+    return `<div class="card" style="padding:10px 12px;margin-bottom:6px">
+      <b>${esc(names[k.driver_id] || "Sopir")}</b> · ${esc(LBL[k.jenis] || k.jenis)}${cek}
+      <div class="hint">${fmt(k.mulai)} – ${fmt(k.selesai)} (${menit} menit)</div></div>`;
+  }).join("");
+  box.innerHTML = `
+    <p class="lead">Penyebab terputusnya kabar dari HP sopir. Penyebab baru diketahui setelah HP terhubung kembali. Sinyal hilang, mode pesawat, dan HP mati tidak dihitung sebagai pelanggaran. Aplikasi berhenti ditandai "perlu dicek" karena bisa disengaja.</p>
+    ${error ? `<p class="err">Gagal memuat: ${esc(error.message)}</p>` : ""}
+    ${rows || '<p class="hint">Belum ada kejadian.</p>'}`;
 }
  // ---------- data & realtime ----------
 async function load() {
