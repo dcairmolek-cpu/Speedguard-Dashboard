@@ -894,13 +894,13 @@ function info(title, html) {
 }
 
 // ---------- pengaturan ----------
-const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["autoend", "Akhiri tugas"], ["fitur", "Fitur sopir"], ["kode", "Kode masuk"], ["sistem", "Status sistem"], ["koneksi", "Kejadian koneksi"], ["staff", "Pengguna"]];
+const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["autoend", "Akhiri tugas"], ["fitur", "Fitur sopir"], ["kode", "Kode masuk"], ["sistem", "Status sistem"], ["koneksi", "Kejadian koneksi"], ["kendara", "Deteksi kendaraan"], ["staff", "Pengguna"]];
 let stab = "rules";
 function openSettings(t) { if (!isAdmin) return; stab = t || stab; $("#sheet .sh-h h2").textContent = "Pengaturan"; $("#snav").style.display = ""; $("#sbody").style.gridColumn = ""; $("#sheet").hidden = false; renderSheet(); }
 function closeSheet() { $("#sheet").hidden = true; setNav(tab === "alerts" ? "alerts" : "dash"); }
 function renderSheet() {
   $("#snav").innerHTML = STABS.map(([k, t]) => `<button data-s="${k}" ${k === stab ? 'aria-current="true"' : ""}>${t}</button>`).join("");
-  ({ rules: tabRules, dc: tabDC, notify: tabNotify, drivers: tabDrivers, vehicles: tabVehicles, staff: tabStaff, audit: tabAudit, autoend: tabAutoEnd, fitur: tabFeatures, kode: tabLoginCode, sistem: tabSystem, })[stab]();
+  ({ rules: tabRules, koneksi: tabKoneksi, kendara: tabKendara, dc: tabDC, notify: tabNotify, drivers: tabDrivers, vehicles: tabVehicles, staff: tabStaff, audit: tabAudit, autoend: tabAutoEnd, fitur: tabFeatures, kode: tabLoginCode, sistem: tabSystem, })[stab]();
 }
 function setFleet(n) { fleetName = n; $("#fleet").textContent = n; $("#sub").textContent = n; document.title = "SpeedGuard · " + n; }
 async function saveSettings(v) {
@@ -2013,6 +2013,39 @@ async function tabKoneksi() {
     <p class="lead">Penyebab terputusnya kabar dari HP sopir. Penyebab baru diketahui setelah HP terhubung kembali. Sinyal hilang, mode pesawat, dan HP mati tidak dihitung sebagai pelanggaran. Aplikasi berhenti ditandai "perlu dicek" karena bisa disengaja.</p>
     ${error ? `<p class="err">Gagal memuat: ${esc(error.message)}</p>` : ""}
     ${rows || '<p class="hint">Belum ada kejadian.</p>'}`;
+}
+ // ---------- deteksi kendaraan (rem mendadak, belok tajam) ----------
+async function tabKendara() {
+  const box = $("#sbody");
+  box.innerHTML = '<p class="hint" style="padding:20px">Memuat…</p>';
+  const [st, ev] = await Promise.all([
+    sb.from("app_settings").select("deteksi_kendara,kendara_mode").eq("fleet_id", S.fleet_id).single(),
+    sb.from("kejadian_kendara").select("*").order("waktu", { ascending: false }).limit(100)
+  ]);
+  const s = st.data || {};
+  const names = {};
+  [...drivers.entries()].forEach(([id, d]) => (names[id] = d.full_name || "Sopir"));
+  const LBL = { rem_mendadak: "Rem mendadak", belok_tajam: "Belok tajam" };
+  const inp = "width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)";
+  const rows = (ev.data || []).map(k => `<div class="card" style="padding:10px 12px;margin-bottom:6px">
+      <b>${esc(names[k.driver_id] || "Sopir")}</b> · ${esc(LBL[k.jenis] || k.jenis)} · ${Number(k.nilai).toFixed(1)} m/s²
+      <div class="hint">${esc(new Date(k.waktu).toLocaleString("id-ID"))} · ${k.mode === "uji" ? "mode uji (tidak masuk rapor)" : "masuk rapor"}</div></div>`).join("");
+  box.innerHTML = `
+    <p class="lead">Deteksi rem mendadak (perlambatan 4 m/s² lebih) dan belok tajam (percepatan lateral 3 m/s² lebih). Mode uji hanya mencatat, tidak masuk rapor. Hasil deteksi bergantung pada posisi HP, jadi perlu dicek saat uji jalan.</p>
+    <div class="card" style="padding:14px;margin-bottom:12px">
+      <label style="display:flex;justify-content:space-between;align-items:center;padding:8px 0"><span>Aktifkan deteksi</span><input id="kd-on" type="checkbox" ${s.deteksi_kendara !== false ? "checked" : ""} style="width:20px;height:20px"></label>
+      <div style="margin-top:8px"><label class="hint">Mode</label>
+        <select id="kd-mode" style="${inp}"><option value="uji" ${s.kendara_mode !== "rapor" ? "selected" : ""}>Mode uji (tidak masuk rapor)</option><option value="rapor" ${s.kendara_mode === "rapor" ? "selected" : ""}>Masuk rapor</option></select></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn pri" id="kd-save">Simpan</button></div>
+    </div>
+    <div class="hd" style="margin:6px 0 8px"><b>Kejadian terbaru</b></div>
+    ${rows || '<p class="hint">Belum ada kejadian.</p>'}`;
+  $("#kd-save").onclick = async () => {
+    const err = await saveSettings({ deteksi_kendara: $("#kd-on").checked, kendara_mode: $("#kd-mode").value });
+    if (err) return toast(err, "bad");
+    toast("Pengaturan deteksi tersimpan.", "");
+    tabKendara();
+  };
 }
  // ---------- data & realtime ----------
 async function load() {
