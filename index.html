@@ -597,7 +597,14 @@ function activeRows() {
     .sort((a, b) => order[a.st] - order[b.st] || a.full_name.localeCompare(b.full_name));
 }
 // ---------- tampilan utama ----------
-function evInfo(e) {
+const ackKey = e => ${e.driver_id}|${e.type}|${e.occurred_at};
+let ackedSet = new Set(JSON.parse(localStorage.getItem("sg_acked") || "[]"));
+function ackAlert(k) {
+  ackedSet.add(k);
+  localStorage.setItem("sg_acked", JSON.stringify([...ackedSet].slice(-300)));
+  renderAlerts();
+}
+ function evInfo(e) {
   const nm = drivers.get(e.driver_id)?.full_name || "Sopir";
   const m = {
     overspeed: [`Overspeed ${Math.round(e.speed_kmh)} km/jam`, `batas ${Math.round(e.limit_kmh)} · ${e.duration_s} dtk`, "!"],
@@ -620,7 +627,7 @@ function rowHtml(d) {
 }
 function alertHtml(e) {
   const i = evInfo(e);
-  return `<button class="alc ${e.type === "sos" ? "sos" : ""}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
+  return `<button class="alc ${e.type === "sos" ? "sos" : ""}" data-key="${esc(ackKey(e))}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
     <div><small>Peringatan terbaru</small><b>${esc(i.title)}</b><span>${esc(i.name)} · ${fmtT(e.occurred_at)}</span></div></button>`;
 }
 function render() {
@@ -640,11 +647,11 @@ function render() {
 }
 function renderAlerts() {
   const ev = events.filter(e => ALERT_TYPES.includes(e.type));
-  const recent = ev.filter(e => Date.now() - new Date(e.occurred_at) < 864e5);
+  const recent = ev.filter(e => Date.now() - new Date(e.occurred_at) < 864e5 && !ackedSet.has(ackKey(e)));
   ["#abadge", "#bbadge"].forEach(s => { $(s).textContent = recent.length || ""; });
   $("#alist").innerHTML = ev.length ? ev.slice(0, 80).map(e => {
     const i = evInfo(e);
-    return `<li class="ev ${e.type}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
+    return `<li class="ev ${e.type}" data-key="${esc(ackKey(e))}" data-id="${e.driver_id}" data-lat="${e.lat ?? ""}" data-lng="${e.lng ?? ""}"><i>${i.icon}</i>
       <div><b>${esc(i.title)}</b><small>${esc(i.name)} · ${esc(i.sub)}</small></div><time>${fmtDT(e.occurred_at)}</time></li>`;
   }).join("") : `<li class="empty">Belum ada peringatan.</li>`;
   const last = recent[0];
@@ -2319,7 +2326,7 @@ async function enter() {
   $("#chips").onclick = e => { const f = e.target.closest("[data-f]"); if (f) { filter = f.dataset.f; render(); } };
   const open = e => { const r = e.target.closest(".row"); if (r) openDetail(r.dataset.id); };
   $("#list").onclick = open; $("#list").onkeydown = e => { if (e.key === "Enter") open(e); }; $("#dlist").onclick = open;
-  const evOpen = e => { const r = e.target.closest("[data-id][data-lat]"); if (r) { openDetail(r.dataset.id); flyTo(r); } };
+  const evOpen = e => { const r = e.target.closest("[data-id][data-lat]"); if (r) { if (r.dataset.key) ackAlert(r.dataset.key); openDetail(r.dataset.id); flyTo(r); } };
   $("#alist").onclick = evOpen; $("#alertcard").onclick = evOpen; $("#alertfs").onclick = evOpen;
   $("#sclose").onclick = closeSheet; $("#rp-close").onclick = closeRapor; $("#rp-print").onclick = () => window.print(); $("#rclose").onclick = () => { closeRecap(); setNav(tab === "alerts" ? "alerts" : "dash"); };
   $("#snav").onclick = e => { const b = e.target.closest("[data-s]"); if (b) { stab = b.dataset.s; renderSheet(); } };
