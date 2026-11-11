@@ -514,7 +514,6 @@ let filter = "all", q = "", sel = null, tab = "fleet", map = null, base = {}, la
 const markers = new Map();
 let meId = null, isAdmin = true, fleetName = "DC Air Molek", drawerOpen = true, deferredInstall = null;
 const ALERT_TYPES = ["overspeed", "offline", "gps_lost", "low_battery", "idle", "repeat_overspeed", "sos"];
-
 // ---------- bantu ----------
 const ageS = t => t ? (Date.now() - new Date(t)) / 1000 : Infinity;
 function ago(t) {
@@ -577,7 +576,6 @@ async function api(action, payload) {
   }
   return data?.error ? { error: data.error } : { data };
 }
-
 // ---------- status ----------
 function stateOf(d) {
   if (!d.active || !d.status || d.status === "off_duty") return "off";
@@ -598,7 +596,6 @@ function activeRows() {
   return [...drivers.values()].filter(d => d.active).map(d => ({ ...d, st: stateOf(d) }))
     .sort((a, b) => order[a.st] - order[b.st] || a.full_name.localeCompare(b.full_name));
 }
-
 // ---------- tampilan utama ----------
 function evInfo(e) {
   const nm = drivers.get(e.driver_id)?.full_name || "Sopir";
@@ -678,7 +675,6 @@ function renderPick(all) {
   }
   $("#pick").value = sel || "";
 }
-
 // ---------- detail sopir ----------
 function buildDetail() {
   const c = $("#dcard");
@@ -709,7 +705,6 @@ function renderDetail() {
       <div><dt>Akurasi GPS</dt><dd>${d.accuracy_m == null ? "–" : "± " + Math.round(d.accuracy_m) + " m"}</dd></div></dl>
     ${d.lat == null ? "" : `<a class="hint" style="color:var(--red2);font-weight:600" href="https://www.google.com/maps?q=${d.lat},${d.lng}" target="_blank" rel="noopener">Buka di Google Maps ›</a>`}`;
 }
-
 // ---------- kecepatan & grafik ----------
 function gaugeSvg(sp, lim) {
   const max = Math.max(120, Math.ceil(lim * 1.5 / 10) * 10), R = 78, cx = 100, cy = 100;
@@ -765,7 +760,6 @@ function renderChartCard(force) {
     $("#rp-play").onclick = rpPlay; $("#rp-r").oninput = e => { rpStop(); rpGo(+e.target.value); };
   } else { c.dataset.mode = "trend"; c.innerHTML = `<h3>Overspeed 7 hari terakhir</h3><div class="chartwrap">${barChart()}</div>`; }
 }
-
 // ---------- jejak & putar ulang ----------
 const rp = { i: 0, timer: null, mk: null, tail: null };
 function rpStop() { if (rp.timer) { clearInterval(rp.timer); rp.timer = null; } const b = $("#rp-play"); if (b) b.textContent = "▶"; }
@@ -817,7 +811,6 @@ async function loadTrail(download) {
     over: data.filter(p => p.overspeed).length, t0: +new Date(data[0].recorded_at), t1: +new Date(data[data.length - 1].recorded_at) };
   renderChartCard(true); rpGo(0);
 }
-
 // ---------- peta ----------
 function initMap() {
   map = L.map("map", { zoomControl: false, attributionControl: false }).setView([0.5, 101.5], 7);
@@ -899,7 +892,6 @@ function drawMarkers() {
   }
   for (const [id, m] of markers) if (!seen.has(id)) { m.remove(); markers.delete(id); }
 }
-
 // ---------- dialog kecil ----------
 function ask({ title, note, fields, submit = "Simpan", onSubmit }) {
   const m = $("#modal");
@@ -928,7 +920,6 @@ function info(title, html) {
   m.innerHTML = `<div class="mbox"><h3>${esc(title)}</h3>${html}<div class="foot"><button class="btn pri" id="mx">Selesai</button></div></div>`;
   m.hidden = false; $("#mx").onclick = () => { m.hidden = true; };
 }
-
 // ---------- pengaturan ----------
 const STABS = [["rules", "Aturan"], ["dc", "Lokasi DC"], ["notify", "Notifikasi"], ["autoend", "Akhiri tugas"], ["fitur", "Fitur sopir"], ["kode", "Kode masuk"], ["sistem", "Status sistem"], ["koneksi", "Kejadian koneksi"], ["kendara", "Deteksi kendaraan"], ["bbm", "BBM"], ["wilayah", "Wilayah"], ["staff", "Pengguna"]];
 let stab = "rules";
@@ -1160,7 +1151,6 @@ function tabStaff() {
       onSubmit: async () => { const { error } = await sb.from("profiles").update({ active: !p.active }).eq("id", p.id); if (error) return error.message; await load(); renderSheet(); return null; } });
   };
 }
-
 // ---------- rekap mingguan ----------
 function weekRanges() {            // 8 minggu terakhir, Senin–Minggu (WIB)
   const w = new Date(Date.now() + 7 * 36e5), dow = (w.getUTCDay() + 6) % 7;
@@ -1202,7 +1192,6 @@ async function loadRecap(i) {
       <td class="n ${r.overspeed ? "bad" : ""}">${r.overspeed || (r.shifts ? '<span class="pill">Bersih</span>' : "–")}</td><td class="n">${r.offline || "–"}</td></tr>`).join("") || `<tr><td colspan="7" class="muted">Belum ada data.</td></tr>`}
     </tbody><tfoot><tr><td>Total</td><td class="n">${sum("active_days")}</td><td class="n">${sum("hours").toLocaleString("id-ID", { maximumFractionDigits: 1 })}</td><td class="n">${sum("km").toLocaleString("id-ID", { maximumFractionDigits: 1 })}</td><td class="n">${Math.round(Math.max(0, ...recapRows.map(r => r.max_kmh))) || "–"}</td><td class="n">${sum("overspeed")}</td><td class="n">${sum("offline")}</td></tr></tfoot></table></div>`;
 }
-
 // ---------- rapor sopir ----------
 const RK = { gapMax: 5, breakMin: 15, driveMaxH: 4, stopLongMin: 60 };     // menit, menit, jam, menit
 let work = (() => { try { return JSON.parse(localStorage.getItem("sg-work")) || { s: 5, e: 20 }; } catch (e) { return { s: 5, e: 20 }; } })();
@@ -1429,7 +1418,6 @@ async function paintHot(body) {
   $("#ht-show").onclick = () => draw();
   body.querySelector(".hot ul").onclick = e => { const li = e.target.closest("[data-la]"); if (li) draw([+li.dataset.la, +li.dataset.ln]); };
 }
-
 // ---------- lokasi DC dan perkiraan tiba ----------
 function tabDC() {
   $("#sbody").innerHTML = `<p class="lead">Titik DC dipakai untuk menghitung jarak dan perkiraan tiba. Ambil koordinat dari Google Maps: klik kanan lokasi DC, lalu salin angka pertama.</p>
@@ -1471,7 +1459,6 @@ async function paintDC() {
     <div><dt>Perkiraan tiba</dt><dd>${eta == null ? "–" : "± " + eta + " mnt"}</dd></div></dl>
     <p class="hint" style="font-size:12px">${moving ? "" : "Sopir sedang berhenti. "}Dihitung dengan rata-rata armada ${f1(spd)} km/jam, faktor jalan ${String(S.road_factor ?? 1.3).replace(".", ",")}. Perkiraan, bukan jaminan.</p></div>`);
 }
-
 // ---------- titik DC di peta ----------
 let dcMarker = null;
 function drawDC() {
@@ -1665,8 +1652,6 @@ function paintEnd() {
     toast("Tugas diakhiri admin.", ""); await load(); await getVehicleStatus(true);
   };
 }
-
-
 // ---------- formulir kendaraan (tambah dan ubah) ----------
 const VF = v => [
   { k: "plate", label: "Plat nomor", value: v?.plate, placeholder: "BM 1234 GA", required: true },
@@ -1708,14 +1693,12 @@ async function saveVehicleForm(x, cur) {
   await load(); await getVehicleStatus(true); drawFleetParts();
   return null;
 }
-
 // ---------- pop-up umum (Sopir, Riwayat) ----------
 function openPopup(title, render) {
   $("#sheet").hidden = false; $("#sheet .sh-h h2").textContent = title;
   $("#snav").style.display = "none"; $("#sbody").style.gridColumn = "1 / -1";
   render();
 }
-
 // ---------- akhiri tugas otomatis (pengaturan) ----------
 function tabAutoEnd() {
   $("#sbody").innerHTML = `<p class="lead">Sesi tugas yang masih terbuka akan diakhiri otomatis pada jam ini (WIB). Sopir yang lupa menekan Selesai tidak perlu menunggu admin.</p>
@@ -1734,7 +1717,6 @@ function tabAutoEnd() {
     if (!err) toast("Pengaturan tersimpan.");
   };
 }
-
 // ---------- laporan kejadian dan cek kendaraan ----------
 const RPT_KIND = { kerusakan: "Kerusakan ringan", hampir_celaka: "Hampir celaka", kecelakaan: "Kecelakaan", lainnya: "Lainnya" };
 const RPT_ITEM = { ban: "Ban dan tekanan angin", rem: "Rem", lampu_utama: "Lampu utama dan rem", lampu_sein: "Lampu sein", oli: "Oli mesin", air: "Air radiator", wiper: "Wiper dan air kaca", spion: "Spion", klakson: "Klakson", lampu: "Lampu", bodi: "Kondisi bodi" };
@@ -1825,7 +1807,6 @@ function chkCard(v) {
     ${v.notes ? `<p style="margin-bottom:8px">${esc(v.notes)}</p>` : ""}
     <div style="display:flex;gap:6px;flex-wrap:wrap">${photoRow(v.photos)}</div></div>`;
 }
-
 // ---------- pengumuman admin ----------
 async function tabAnnounce() {
   const box = $("#sbody");
@@ -1887,7 +1868,6 @@ async function tabAnnounce() {
     tabAnnounce();
   };
 }
-
 // ---------- fitur sopir (pengaturan) ----------
 function toggleField(id, label, on) {
   return `<label style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><span>${label}</span><input id="${id}" type="checkbox" ${on ? "checked" : ""} style="width:20px;height:20px"></label>`;
@@ -1920,7 +1900,6 @@ async function tabFeatures() {
     if (!err) toast("Pengaturan fitur tersimpan.", "");
   };
 }
-
 // ---------- service: bengkel, order, dan peringatan ----------
 const SV_ST = { menunggu: "Menunggu dimulai", menuju: "Menuju bengkel", di_bengkel: "Di bengkel", ditinggal: "Ditinggal di bengkel" };
 function svPeople() {
@@ -2004,7 +1983,6 @@ async function tabService() {
     tabService();
   };
 }
-
 // ---------- kode masuk sementara untuk sopir ----------
 async function tabLoginCode() {
   const box = $("#sbody");
@@ -2025,7 +2003,6 @@ async function tabLoginCode() {
       <div class="hint">Berlaku 10 menit. Berikan kode ini langsung kepada sopir.</div>`;
   };
 }
-
 // ---------- status sistem ----------
 async function tabSystem() {
   const box = $("#sbody");
@@ -2054,7 +2031,6 @@ async function tabSystem() {
     <div style="margin-top:10px"><button class="btn sm" id="sys-re">Muat ulang</button></div>`;
   $("#sys-re").onclick = tabSystem;
 }
-
 // ---------- kejadian koneksi ----------
 async function tabKoneksi() {
   const box = $("#sbody");
@@ -2076,7 +2052,6 @@ async function tabKoneksi() {
     ${error ? `<p class="err">Gagal memuat: ${esc(error.message)}</p>` : ""}
     ${rows || '<p class="hint">Belum ada kejadian.</p>'}`;
 }
-
 // ---------- deteksi kendaraan (rem mendadak, belok tajam) ----------
 async function tabKendara() {
   const box = $("#sbody");
@@ -2110,7 +2085,6 @@ async function tabKendara() {
     tabKendara();
   };
 }
-
 // ---------- BBM: km per liter ----------
 async function tabBBM() {
   const box = $("#sbody");
@@ -2153,7 +2127,6 @@ async function tabBBM() {
         : '<p class="hint" style="margin-top:6px">Belum ada data pengisian.</p>'}
     </div>`;
 }
-
 // ---------- wilayah batas kecepatan ----------
 let wlMap = null, wlCircle = null;
 async function tabWilayah() {
@@ -2199,7 +2172,6 @@ async function tabWilayah() {
           <div class="hint">radius ${w.radius_m} m · batas ${w.batas_kmh} km/jam${w.jenis ? " · " + esc(w.jenis) : ""}${w.sumber === "pencarian" ? " · dari pencarian" : ""}</div></div>
         <button class="btn sm" data-wltoggle="${w.id}" data-on="${w.aktif ? 1 : 0}">${w.aktif ? "Nonaktifkan" : "Aktifkan"}</button></div>`).join("") || '<p class="hint">Belum ada wilayah.</p>'}
     </div>`;
-
   // peta pratinjau lingkaran (Leaflet, jika tersedia)
   if (typeof L !== "undefined") {
     if (wlMap) { wlMap.remove(); wlMap = null; }
@@ -2216,14 +2188,12 @@ async function tabWilayah() {
     wlMap.on("click", e => { $("#wl-lat").value = e.latlng.lat.toFixed(5); $("#wl-lng").value = e.latlng.lng.toFixed(5); redraw(); });
     ["wl-lat", "wl-lng", "wl-rad"].forEach(id => $("#" + id).oninput = redraw);
   }
-
   $("#wl-search-save").onclick = async () => {
     const err = await saveSettings({ wilayah_search: $("#wl-search-on").checked });
     if (err) return toast(err, "bad");
     toast("Pengaturan pencarian tersimpan.", "");
     tabWilayah();
   };
-
   // pencarian tempat lewat OpenStreetMap, dibatasi ke Indonesia
   if (searchOn) {
     const find = async () => {
@@ -2247,7 +2217,6 @@ async function tabWilayah() {
     $("#wl-find").onclick = find;
     $("#wl-q").onkeydown = e => { if (e.key === "Enter") find(); };
   }
-
   $("#wl-save").onclick = async () => {
     const nama = $("#wl-nama").value.trim(), lat = Number($("#wl-lat").value), lng = Number($("#wl-lng").value);
     const rad = Number($("#wl-rad").value), lim = Number($("#wl-lim").value);
@@ -2265,14 +2234,12 @@ async function tabWilayah() {
     toast("Wilayah disimpan. Berlaku untuk sopir setelah aplikasi memuat data.", "");
     tabWilayah();
   };
-
   box.querySelectorAll("[data-wltoggle]").forEach(b => b.onclick = async () => {
     const { error: e } = await sb.from("wilayah_batas").update({ aktif: b.dataset.on !== "1", updated_at: new Date().toISOString() }).eq("id", b.dataset.wltoggle);
     if (e) return toast(e.message, "bad");
     tabWilayah();
   });
 }
-
 // ---------- data & realtime ----------
 async function load() {
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
@@ -2313,7 +2280,6 @@ function subscribe() {
     })
     .subscribe(s => { $("#live").classList.toggle("ok", s === "SUBSCRIBED"); $("#live span").textContent = s === "SUBSCRIBED" ? "Langsung" : "Terputus, mencoba lagi"; });
 }
-
 // ---------- mulai ----------
 function showTabs() {
   $("#p-fleet").hidden = tab !== "fleet"; $("#p-alerts").hidden = tab !== "alerts";
