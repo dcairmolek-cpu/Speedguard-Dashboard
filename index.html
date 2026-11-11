@@ -597,7 +597,7 @@ function activeRows() {
     .sort((a, b) => order[a.st] - order[b.st] || a.full_name.localeCompare(b.full_name));
 }
 // ---------- tampilan utama ----------
-const ackKey = e => ${e.driver_id}|${e.type}|${e.occurred_at};
+const ackKey = e => e.driver_id + "|" + e.type + "|" + e.occurred_at;
 let ackedSet = new Set(JSON.parse(localStorage.getItem("sg_acked") || "[]"));
 function ackAlert(k) {
   ackedSet.add(k);
